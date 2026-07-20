@@ -1,4 +1,9 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/shared/api/axios";
+import { toast } from "sonner";
 import { CleanTable } from "@/shared/components/ui/CleanTable";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
@@ -11,6 +16,7 @@ interface OrderTableProps {
 }
 
 export const OrderTable = ({ onEdit }: OrderTableProps) => {
+  const queryClient = useQueryClient();
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [selectionOrder, setSelectionOrder] = useState<string[]>([]);
   const [selectedDriver, setSelectedDriver] = useState("");
@@ -18,10 +24,64 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | undefined>();
 
+  // 1. Query para listar pedidos
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ["orders"],
+    queryFn: async () => {
+      const res = await api.get("/orders");
+      return res.data.data || [];
+    },
+  });
+
+  // 2. Query para listar choferes activos
+  const { data: drivers = [] } = useQuery({
+    queryKey: ["drivers"],
+    queryFn: async () => {
+      const res = await api.get("/drivers");
+      return res.data.data || [];
+    },
+  });
+
+  // 3. Mutación para asignar chofer a pedidos
+  const assignDriverMutation = useMutation({
+    mutationFn: async ({ orderIds, driverId }: { orderIds: string[]; driverId: string }) => {
+      await Promise.all(
+        orderIds.map((id) => api.put(`/orders/${id}`, { driverId }))
+      );
+    },
+    onSuccess: () => {
+      toast.success("Chofer asignado correctamente a los pedidos seleccionados");
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setRowSelection({});
+      setSelectedDriver("");
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || "Error al asignar chofer";
+      toast.error(msg);
+    },
+  });
+
+  // 4. Mutación para iniciar recorrido de pedido
+  const startRouteMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      await api.put(`/orders/${orderId}/status`, { estado: "IN_TRANSIT" });
+    },
+    onSuccess: () => {
+      toast.success("Recorrido iniciado correctamente");
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || "Error al iniciar el recorrido";
+      toast.error(msg);
+    },
+  });
+
   useEffect(() => {
-    setSelectionOrder(prev => {
-      const stillSelected = prev.filter(id => rowSelection[id]);
-      const newIds = Object.keys(rowSelection).filter(id => rowSelection[id] && !prev.includes(id));
+    setSelectionOrder((prev) => {
+      const stillSelected = prev.filter((id) => rowSelection[id]);
+      const newIds = Object.keys(rowSelection).filter(
+        (id) => rowSelection[id] && !prev.includes(id)
+      );
       return [...stillSelected, ...newIds];
     });
   }, [rowSelection]);
@@ -64,21 +124,57 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
       },
       meta: { align: "center" }
     },
-    { header: "Nº Pedido", accessorKey: "id" },
-    { header: "Guía", accessorKey: "guia", cell: (info: any) => (
-      <span className="font-mono text-gray-500">#{info.getValue()}</span>
-    ) },
-    { header: "Cliente", accessorKey: "client" },
-    { header: "Dirección de Entrega", accessorKey: "address" },
-    { header: "Chofer", accessorKey: "driver" },
-    { header: "Estado", accessorKey: "status", cell: (info: any) => {
-      const val = info.getValue();
-      return (
-        <Badge variant={val === "Pendiente" ? "default" : val === "En camino" ? "warning" : "success"}>
-          {val}
-        </Badge>
-      );
-    } },
+    { header: "Nº Pedido", accessorKey: "codigo" },
+    { 
+      header: "Guía", 
+      accessorKey: "guia", 
+      cell: (info: any) => {
+        const val = info.getValue();
+        return val ? <span className="font-mono text-gray-500">#{val}</span> : <span className="text-gray-400">-</span>;
+      }
+    },
+    { 
+      header: "Cliente", 
+      accessorFn: (row: any) => row.cliente?.nombre || "-" 
+    },
+    { 
+      header: "Dirección de Entrega", 
+      accessorKey: "direccionOriginal" 
+    },
+    { 
+      header: "Chofer", 
+      accessorFn: (row: any) => row.driver?.usuario?.nombre || <span className="text-gray-400 font-medium">No asignado</span> 
+    },
+    { 
+      header: "Estado", 
+      accessorKey: "estado", 
+      cell: (info: any) => {
+        const val = info.getValue();
+        const labelMap: Record<string, string> = {
+          PENDING: "Pendiente",
+          IN_TRANSIT: "En camino",
+          DELIVERED: "Entregado",
+          FAILED: "Fallido",
+        };
+        const label = labelMap[val] || val;
+
+        return (
+          <Badge 
+            variant={
+              val === "PENDING" 
+                ? "default" 
+                : val === "IN_TRANSIT" 
+                ? "warning" 
+                : val === "DELIVERED" 
+                ? "success" 
+                : "danger"
+            }
+          >
+            {label}
+          </Badge>
+        );
+      } 
+    },
     { 
       header: "Acciones", 
       accessorKey: "actions", 
@@ -102,52 +198,70 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
           >
             <IconPencil size={18} stroke={2} />
           </button>
-          <button 
-            title="Iniciar Recorrido"
-            className="text-gray-400 hover:text-emerald-500 transition-colors cursor-pointer"
-          >
-            <IconPlayerPlay size={18} stroke={2} />
-          </button>
+          {info.row.original.estado === "PENDING" && (
+            <button 
+              title="Iniciar Recorrido"
+              className="text-gray-400 hover:text-emerald-500 transition-colors cursor-pointer"
+              onClick={() => startRouteMutation.mutate(info.row.original.id)}
+            >
+              <IconPlayerPlay size={18} stroke={2} />
+            </button>
+          )}
         </div>
       ) 
     },
   ];
 
-  const mockData = [
-    { id: "PED-1029", guia: "004521", client: "Supermercados Wong", address: "Av. La Marina 123", driver: "Carlos Mendoza", status: "En camino" },
-    { id: "PED-1030", guia: "004522", client: "Tiendas Tambo", address: "Av. Los Proceres 456", driver: "-", status: "Pendiente" },
-    { id: "PED-1031", guia: "004523", client: "Oxxo Express", address: "Jr. de la Unión 789", driver: "Luis Fernandez", status: "Entregado" },
-    { id: "PED-1032", guia: "004524", client: "Bodega Don Pepe", address: "Calle Las Flores 12", driver: "-", status: "Pendiente" },
+  // Mapear choferes a opciones de Select
+  const driverOptions = [
+    { label: "Seleccionar chofer...", value: "" },
+    ...drivers.map((d: any) => ({
+      label: `${d.usuario?.nombre || "Chofer"} (${d.unidad || "Sin unidad"})`,
+      value: d.id,
+    })),
   ];
 
-  const selectedCount = Object.keys(rowSelection).filter(k => rowSelection[k]).length;
+  // Resolver IDs de pedidos seleccionados usando los índices de rowSelection
+  const selectedOrderIds = Object.keys(rowSelection)
+    .filter((k) => rowSelection[k])
+    .map((indexKey) => orders[parseInt(indexKey)]?.id)
+    .filter(Boolean);
+
+  const handleAssignDriver = () => {
+    if (selectedOrderIds.length > 0 && selectedDriver) {
+      assignDriverMutation.mutate({
+        orderIds: selectedOrderIds,
+        driverId: selectedDriver,
+      });
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col gap-4">
-      {selectedCount > 0 && (
+      {selectedOrderIds.length > 0 && (
         <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-3">
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
-              {selectedCount}
+              {selectedOrderIds.length}
             </span>
             <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
-              Pedidos pendientes seleccionados
+              Pedidos seleccionados para asignar
             </span>
           </div>
           <div className="flex items-center gap-3">
             <div className="w-64">
               <Select 
-                options={[
-                  { label: "Seleccionar chofer...", value: "" },
-                  { label: "Carlos Mendoza", value: "carlos" },
-                  { label: "Luis Fernandez", value: "luis" }
-                ]}
+                options={driverOptions}
                 value={selectedDriver}
                 onChange={(val) => setSelectedDriver(val)}
               />
             </div>
-            <Button variant="primary" disabled={!selectedDriver}>
-              Asignar Chofer
+            <Button 
+              variant="primary" 
+              disabled={!selectedDriver || assignDriverMutation.isPending}
+              onClick={handleAssignDriver}
+            >
+              {assignDriverMutation.isPending ? "Asignando..." : "Asignar Chofer"}
             </Button>
           </div>
         </div>
@@ -156,11 +270,11 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
       <div className="flex-1 bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm overflow-hidden flex flex-col">
         <CleanTable 
           columns={columns} 
-          data={mockData} 
-          isLoading={false} 
+          data={orders} 
+          isLoading={isLoading} 
           rowSelection={rowSelection}
           onRowSelectionChange={setRowSelection}
-          enableRowSelection={(row) => row.original.status === "Pendiente"}
+          enableRowSelection={(row) => row.original.estado === "PENDING"}
         />
       </div>
 

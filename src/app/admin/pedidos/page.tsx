@@ -5,8 +5,12 @@ import { Button } from "@/shared/components/ui/Button";
 import { IconPlus, IconFileExport } from "@tabler/icons-react";
 import { OrderTable } from "@/features/pedidos/components/OrderTable";
 import { OrderDrawer } from "@/features/pedidos/components/OrderDrawer";
+import api from "@/shared/api/axios";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function PedidosPage() {
+  const queryClient = useQueryClient();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -14,8 +18,37 @@ export default function PedidosPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      console.log("Archivo seleccionado:", file.name);
-      // Aquí irá la lógica de subida de archivo
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const toastId = toast.loading("Subiendo y procesando archivo Excel...");
+      
+      api.post("/orders/import", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      })
+        .then((res) => {
+          const count = res.data.data?.length || 0;
+          toast.success(`Importación exitosa: ${count} pedidos creados`, { id: toastId });
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+          }
+        })
+        .catch((err) => {
+          const resMessage = err.response?.data?.message;
+          if (resMessage?.code === "ERR_VALIDATION_FAILED" && Array.isArray(resMessage.details)) {
+            const firstErr = resMessage.details[0];
+            toast.error(`Fila ${firstErr.row}: ${firstErr.error}`, { id: toastId });
+          } else {
+            const msg = resMessage || "Ocurrió un error al importar el archivo";
+            toast.error(msg, { id: toastId });
+          }
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+          }
+        });
     }
   };
 

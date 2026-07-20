@@ -1,4 +1,8 @@
+"use client";
+
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/shared/api/axios";
 import { CleanTable } from "@/shared/components/ui/CleanTable";
 import { Badge } from "@/shared/components/ui/Badge";
 import { IconPencil } from "@tabler/icons-react";
@@ -8,15 +12,28 @@ interface ClientTableProps {
 }
 
 export const ClientTable = ({ onEdit }: ClientTableProps) => {
+  const { data: companies = [], isLoading } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const res = await api.get("/customers/companies");
+      return res.data.data || [];
+    },
+  });
+
   const columns = [
-    { header: "Razón Social", accessorKey: "name" },
+    { header: "Razón Social", accessorKey: "nombre" },
     { header: "RUC", accessorKey: "ruc" },
-    { header: "Contacto", accessorKey: "phone" },
-    { header: "Pedidos Totales", accessorKey: "orders" },
-    { header: "Estado", accessorKey: "status", cell: (info: any) => {
-      const val = info.getValue();
-      return <Badge variant={val === "Activo" ? "success" : "danger"}>{val}</Badge>;
-    } },
+    { 
+      header: "Sucursales registradas", 
+      accessorFn: (row: any) => `${row.clientes?.length || 0} sucursal(es)` 
+    },
+    { 
+      header: "Estado", 
+      accessorKey: "status", 
+      cell: () => {
+        return <Badge variant="success">Activo</Badge>;
+      } 
+    },
     {
       header: "Acciones",
       accessorKey: "actions",
@@ -35,15 +52,9 @@ export const ClientTable = ({ onEdit }: ClientTableProps) => {
     }
   ];
 
-  const mockData = [
-    { id: 1, name: "Supermercados Wong S.A.", ruc: "20100000001", phone: "911 222 333", orders: 145, status: "Activo" },
-    { id: 2, name: "Tiendas Tambo S.A.C.", ruc: "20200000002", phone: "944 555 666", orders: 89, status: "Activo" },
-    { id: 3, name: "Oxxo Express", ruc: "20300000003", phone: "977 888 999", orders: 34, status: "Inactivo" },
-  ];
-
   return (
     <div className="flex-1 bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm overflow-hidden flex flex-col">
-      <CleanTable columns={columns} data={mockData} isLoading={false} />
+      <CleanTable columns={columns} data={companies} isLoading={isLoading} />
     </div>
   );
 };
