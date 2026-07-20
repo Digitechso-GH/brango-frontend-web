@@ -1,11 +1,42 @@
+"use client";
+
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/shared/api/axios";
 import { IconPackage, IconTruckDelivery, IconChecklist } from "@tabler/icons-react";
 
 export const StatsSummary = () => {
+  const { data: orders = [] } = useQuery({
+    queryKey: ["orders"],
+    queryFn: async () => {
+      const res = await api.get("/orders");
+      return res.data.data || [];
+    },
+  });
+
+  const pendingCount = orders.filter((o: any) => o.estado === "PENDING").length;
+  const inTransitCount = orders.filter((o: any) => o.estado === "IN_TRANSIT").length;
+  const deliveredCount = orders.filter((o: any) => o.estado === "DELIVERED").length;
+
   const stats = [
-    { title: "Pedidos Pendientes", value: 14, icon: <IconPackage className="text-orange-500" size={24} />, bg: "bg-orange-50 dark:bg-orange-900/20" },
-    { title: "En Camino", value: 8, icon: <IconTruckDelivery className="text-blue-500" size={24} />, bg: "bg-blue-50 dark:bg-blue-900/20" },
-    { title: "Entregados Hoy", value: 32, icon: <IconChecklist className="text-green-500" size={24} />, bg: "bg-green-50 dark:bg-green-900/20" },
+    { 
+      title: "Pedidos Pendientes", 
+      value: pendingCount, 
+      icon: <IconPackage className="text-orange-500" size={24} />, 
+      bg: "bg-orange-50 dark:bg-orange-900/20" 
+    },
+    { 
+      title: "En Camino", 
+      value: inTransitCount, 
+      icon: <IconTruckDelivery className="text-blue-500" size={24} />, 
+      bg: "bg-blue-50 dark:bg-blue-900/20" 
+    },
+    { 
+      title: "Entregados", 
+      value: deliveredCount, 
+      icon: <IconChecklist className="text-green-500" size={24} />, 
+      bg: "bg-green-50 dark:bg-green-900/20" 
+    },
   ];
 
   return (

@@ -1,4 +1,8 @@
+"use client";
+
 import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/shared/api/axios";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Select } from "@/shared/components/ui/Select";
 import { IconMapPinFilled } from "@tabler/icons-react";
@@ -11,13 +15,49 @@ export const OrderSideList = ({ onSelectOrder }: OrderSideListProps) => {
   const [district, setDistrict] = useState("all");
   const [status, setStatus] = useState("all");
 
-  const mockOrders = [
-    { id: "PED-1029", guia: "004521", unit: "Unidad 01", client: "Supermercados Wong", status: "en_camino", address: "Av. La Marina 123, San Miguel" },
-    { id: "PED-1030", guia: "004522", unit: null, client: "Distribuidora del Sur", status: "pendiente", address: "Av. Los Proceres 456, Surco" },
-    { id: "PED-1031", guia: "004523", unit: "Unidad 02", client: "Tiendas Tambo", status: "entregado", address: "Jr. de la Unión 789, Cercado" },
-    { id: "PED-1032", guia: "004524", unit: "Unidad 03", client: "Oxxo Express", status: "en_camino", address: "Av. Javier Prado Este 901, San Borja" },
-    { id: "PED-1033", guia: "004525", unit: null, client: "Mercado Central", status: "pendiente", address: "Jr. Puno 202, Cercado" },
-  ];
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ["orders"],
+    queryFn: async () => {
+      const res = await api.get("/orders");
+      return res.data.data || [];
+    },
+  });
+
+  const getStatusBadge = (estado: string) => {
+    switch (estado) {
+      case "IN_TRANSIT":
+        return <Badge variant="warning">En camino</Badge>;
+      case "DELIVERED":
+        return <Badge variant="success">Entregado</Badge>;
+      case "FAILED":
+        return <Badge variant="danger">Fallido</Badge>;
+      default:
+        return <Badge variant="default">Pendiente</Badge>;
+    }
+  };
+
+  // Filtrar pedidos
+  const filteredOrders = orders.filter((order: any) => {
+    // Filtrado por estado
+    if (status !== "all") {
+      const statusMap: Record<string, string> = {
+        pendiente: "PENDING",
+        en_camino: "IN_TRANSIT",
+        entregado: "DELIVERED",
+        fallido: "FAILED",
+      };
+      if (order.estado !== statusMap[status]) return false;
+    }
+
+    // Filtrado básico por distrito/dirección
+    if (district !== "all") {
+      const dir = (order.direccionOriginal || "").toLowerCase();
+      const distName = district.replace("_", " ");
+      if (!dir.includes(distName)) return false;
+    }
+
+    return true;
+  });
 
   return (
     <div className="bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm flex flex-col h-full min-h-[500px]">
@@ -30,9 +70,10 @@ export const OrderSideList = ({ onSelectOrder }: OrderSideListProps) => {
               onChange={setDistrict}
               options={[
                 { label: "Todos (Lima)", value: "all" },
-                { label: "San Miguel", value: "san_miguel" },
+                { label: "San Miguel", value: "san miguel" },
                 { label: "Surco", value: "surco" },
-                { label: "Miraflores", value: "miraflores" }
+                { label: "Miraflores", value: "miraflores" },
+                { label: "San Borja", value: "san borja" }
               ]}
             />
           </div>
@@ -44,52 +85,46 @@ export const OrderSideList = ({ onSelectOrder }: OrderSideListProps) => {
                 { label: "Estado: Todos", value: "all" },
                 { label: "Pendientes", value: "pendiente" },
                 { label: "En Camino", value: "en_camino" },
-                { label: "Entregados", value: "entregado" }
+                { label: "Entregados", value: "entregado" },
+                { label: "Fallidos", value: "fallido" }
               ]}
             />
           </div>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-3 custom-scrollbar flex flex-col gap-2">
-        {mockOrders.map((order) => (
-          <div 
-            key={order.id} 
-            onClick={() => onSelectOrder && onSelectOrder(order.id)}
-            className="p-4 rounded-xl border border-gray-100 dark:border-[#2D2D3D] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
-          >
-            <div className="flex justify-between items-start mb-1">
-              <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1 pr-2">{order.client}</p>
-              <Badge variant={
-                order.status === 'en_camino' ? 'warning' : 
-                order.status === 'entregado' ? 'success' : 'default'
-              } className="shrink-0">
-                {order.status.replace("_", " ")}
-              </Badge>
-            </div>
-            
-            <div className="flex items-center gap-1 mb-2 text-gray-500 dark:text-gray-400">
-              <IconMapPinFilled size={12} className={`shrink-0 ${
-                order.status === 'en_camino' ? 'text-amber-500' : 
-                order.status === 'entregado' ? 'text-emerald-500' : 'text-gray-400'
-              }`} />
-              <p className="text-xs font-medium line-clamp-1">{order.address}</p>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs font-medium">
-              <span className="text-gray-400">Guía #{order.guia}</span>
-              <span className="text-gray-300 dark:text-gray-600">•</span>
-              {order.unit ? (
-                <span className="text-amber-600 font-bold bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
-                  {order.unit}
+        {isLoading ? (
+          <div className="text-center py-8 text-xs text-gray-400">Cargando pedidos...</div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="text-center py-8 text-xs text-gray-400">No se encontraron pedidos.</div>
+        ) : (
+          filteredOrders.map((order: any) => (
+            <div 
+              key={order.id} 
+              onClick={() => onSelectOrder && onSelectOrder(order.id)}
+              className="p-4 rounded-xl border border-gray-100 dark:border-[#2D2D3D] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
+            >
+              <div className="flex justify-between items-start mb-1">
+                <span className="text-[10px] font-black text-slate-800 dark:text-slate-100 tracking-wider">
+                  {order.codigo}
                 </span>
-              ) : (
-                <span className="text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
-                  Sin asignar
-                </span>
+                {getStatusBadge(order.estado)}
+              </div>
+              <p className="text-xs font-bold text-gray-800 dark:text-gray-200 mt-1 leading-snug">
+                {order.cliente?.nombre || "Cliente"}
+              </p>
+              <p className="text-[10px] text-gray-500 mt-0.5 truncate">
+                {order.direccionOriginal}
+              </p>
+              {order.chofer && (
+                <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed border-gray-100 dark:border-white/5 text-[9px] font-semibold text-accent">
+                  <IconMapPinFilled size={10} />
+                  <span>{order.chofer.usuario?.nombre || "Chofer"}</span>
+                </div>
               )}
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
