@@ -20,8 +20,10 @@ export const MapView = () => {
 
   // 2. Escuchar WebSockets para ubicaciones en tiempo real
   useEffect(() => {
-    const socket = io("http://localhost:3001", {
-      auth: { token: "operator-mock-token" },
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001";
+    const devToken = process.env.NEXT_PUBLIC_DEV_MOCK_TOKEN || "operator-mock-token";
+    const socket = io(wsUrl, {
+      auth: { token: devToken },
     });
 
     socket.on("connect", () => {
