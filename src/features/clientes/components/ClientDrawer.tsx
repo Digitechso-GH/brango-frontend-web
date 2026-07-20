@@ -14,7 +14,10 @@ import { handleBackendErrors } from "@/shared/utils/handleBackendErrors";
 
 const companySchema = z.object({
   nombre: z.string().min(3, "La razón social debe tener al menos 3 caracteres"),
-  ruc: z.string().length(11, "El RUC debe tener exactamente 11 dígitos"),
+  ruc: z
+    .string()
+    .length(11, "El RUC debe tener exactamente 11 dígitos")
+    .regex(/^\d+$/, "El RUC debe contener solo números"),
 });
 
 type CompanyFormData = z.infer<typeof companySchema>;

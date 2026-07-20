@@ -25,7 +25,10 @@ export const ClientTable = ({ onEdit }: ClientTableProps) => {
     { header: "RUC", accessorKey: "ruc" },
     { 
       header: "Sucursales registradas", 
-      accessorFn: (row: any) => `${row.clientes?.length || 0} sucursal(es)` 
+      accessorFn: (row: any) => {
+        const count = row.clientes?.length || 0;
+        return count === 0 ? "1 (Matriz)" : `${count} sucursal(es)`;
+      }
     },
     { 
       header: "Estado", 
