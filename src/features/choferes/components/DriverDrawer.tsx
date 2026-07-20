@@ -18,6 +18,14 @@ const driverSchema = z.object({
   telefono: z.string().min(7, "El teléfono debe tener al menos 7 dígitos"),
   unidad: z.string().min(4, "La placa/unidad debe tener al menos 4 caracteres"),
   password: z.string().optional(),
+}).refine((data) => {
+  if (data.password && data.password.length > 0 && data.password.length < 6) {
+    return false;
+  }
+  return true;
+}, {
+  message: "La contraseña debe tener al menos 6 caracteres",
+  path: ["password"],
 });
 
 type DriverFormData = z.infer<typeof driverSchema>;
@@ -78,13 +86,25 @@ export const DriverDrawer = ({ isOpen, onClose, driver }: DriverDrawerProps) => 
         return api.post("/drivers", payload);
       }
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
+      const newDriver = res?.data?.data;
       toast.success(driver ? "Chofer actualizado correctamente" : "Chofer registrado correctamente");
-      queryClient.invalidateQueries({ queryKey: ["drivers"] });
+      
+      if (newDriver) {
+        queryClient.setQueryData(["drivers"], (oldData: any[] | undefined) => {
+          const list = oldData || [];
+          if (driver) {
+            return list.map((d) => (d.id === newDriver.id ? newDriver : d));
+          } else {
+            return [...list, newDriver];
+          }
+        });
+      }
       onClose();
     },
     onError: (err: any) => {
-      handleBackendErrors(err, setError, "Error al guardar los datos del chofer");
+      const msg = handleBackendErrors(err, setError, "Error al guardar los datos del chofer");
+      toast.error(msg);
     },
   });
 

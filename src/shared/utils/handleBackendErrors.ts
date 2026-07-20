@@ -28,12 +28,21 @@ export function handleBackendErrors<TFieldValues extends FieldValues>(
 
   if (payload && !payload.success && payload.details?.field) {
     const fieldName = payload.details.field as Path<TFieldValues>;
+    const errorMsg = Array.isArray(payload.message) ? payload.message.join(", ") : payload.message;
     setError(fieldName, {
       type: "server",
-      message: payload.message,
+      message: errorMsg,
     });
-    return payload.message;
+    return errorMsg;
   }
 
-  return payload?.message || error?.message || defaultMessage;
+  if (payload && (payload as any).message) {
+    const msg = (payload as any).message;
+    if (Array.isArray(msg)) {
+      return msg.join(", ");
+    }
+    return String(msg);
+  }
+
+  return error?.message || defaultMessage;
 }

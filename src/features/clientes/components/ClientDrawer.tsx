@@ -56,13 +56,25 @@ export const ClientDrawer = ({ isOpen, onClose, client }: ClientDrawerProps) => 
         return api.post("/customers/companies", data);
       }
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
+      const newCompany = res?.data?.data;
       toast.success(client ? "Cliente actualizado correctamente" : "Cliente registrado correctamente");
-      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      
+      if (newCompany) {
+        queryClient.setQueryData(["companies"], (oldData: any[] | undefined) => {
+          const list = oldData || [];
+          if (client) {
+            return list.map((c) => (c.id === newCompany.id ? newCompany : c));
+          } else {
+            return [...list, newCompany];
+          }
+        });
+      }
       onClose();
     },
     onError: (err: any) => {
-      handleBackendErrors(err, setError, "Error al guardar los datos del cliente");
+      const msg = handleBackendErrors(err, setError, "Error al guardar los datos del cliente");
+      toast.error(msg);
     },
   });
 
