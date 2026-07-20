@@ -38,10 +38,34 @@ export function handleBackendErrors<TFieldValues extends FieldValues>(
 
   if (payload && (payload as any).message) {
     const msg = (payload as any).message;
-    if (Array.isArray(msg)) {
-      return msg.join(", ");
+    const errorMsg = Array.isArray(msg) ? msg.join(", ") : String(msg);
+
+    // Inferencia inteligente de campos basados en el mensaje de error general
+    const lowerMsg = errorMsg.toLowerCase();
+    let guessedField: Path<TFieldValues> | null = null;
+
+    if (lowerMsg.includes("ruc")) {
+      guessedField = "ruc" as Path<TFieldValues>;
+    } else if (lowerMsg.includes("email") || lowerMsg.includes("correo") || lowerMsg.includes("usuario")) {
+      guessedField = "email" as Path<TFieldValues>;
+    } else if (lowerMsg.includes("teléfono") || lowerMsg.includes("telefono") || lowerMsg.includes("phone")) {
+      guessedField = "telefono" as Path<TFieldValues>;
+    } else if (lowerMsg.includes("contraseña") || lowerMsg.includes("password")) {
+      guessedField = "password" as Path<TFieldValues>;
+    } else if (lowerMsg.includes("unidad") || lowerMsg.includes("placa") || lowerMsg.includes("vehículo")) {
+      guessedField = "unidad" as Path<TFieldValues>;
+    } else if (lowerMsg.includes("razón social") || lowerMsg.includes("nombre")) {
+      guessedField = "nombre" as Path<TFieldValues>;
     }
-    return String(msg);
+
+    if (guessedField) {
+      setError(guessedField, {
+        type: "server",
+        message: errorMsg,
+      });
+    }
+
+    return errorMsg;
   }
 
   return error?.message || defaultMessage;
