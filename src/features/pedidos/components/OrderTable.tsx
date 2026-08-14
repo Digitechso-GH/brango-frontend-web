@@ -1,133 +1,45 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "@/shared/api/axios";
-import { toast } from "sonner";
+import React, { useState } from "react";
 import { CleanTable } from "@/shared/components/ui/CleanTable";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
 import { Select } from "@/shared/components/ui/Select";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
-import { IconEye, IconPlayerPlay, IconPencil } from "@tabler/icons-react";
+import { IconEye, IconPencil, IconMapPin } from "@tabler/icons-react";
+
+import { usePedidosQuery, useDriversQuery } from "../hooks/usePedidosQueries";
+import { useAssignDriverMutation, useStartRouteMutation } from "../hooks/usePedidosMutations";
+import { getOrderStatusConfig } from "@/shared/utils/orderStatus.utils";
+import { ORDER_STATUS } from "@/shared/constants/order-status";
 
 interface OrderTableProps {
   onEdit?: (order: any) => void;
 }
 
 export const OrderTable = ({ onEdit }: OrderTableProps) => {
-  const queryClient = useQueryClient();
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-  const [selectionOrder, setSelectionOrder] = useState<string[]>([]);
   const [selectedDriver, setSelectedDriver] = useState("");
   
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | undefined>();
 
-  // 1. Query para listar pedidos
-  const { data: orders = [], isLoading } = useQuery({
-    queryKey: ["orders"],
-    queryFn: async () => {
-      const res = await api.get("/orders");
-      return res.data.data || [];
-    },
-  });
+  // 1. Queries
+  const { data: orders = [], isLoading } = usePedidosQuery();
+  const { data: drivers = [] } = useDriversQuery();
 
-  // 2. Query para listar choferes activos
-  const { data: drivers = [] } = useQuery({
-    queryKey: ["drivers"],
-    queryFn: async () => {
-      const res = await api.get("/drivers");
-      return res.data.data || [];
-    },
+  // 2. Mutaciones
+  const assignDriverMutation = useAssignDriverMutation(() => {
+    setRowSelection({});
+    setSelectedDriver("");
   });
-
-  // 3. Mutación para asignar chofer a pedidos
-  const assignDriverMutation = useMutation({
-    mutationFn: async ({ orderIds, driverId }: { orderIds: string[]; driverId: string }) => {
-      await Promise.all(
-        orderIds.map((id) => api.put(`/orders/${id}`, { driverId }))
-      );
-    },
-    onSuccess: () => {
-      toast.success("Chofer asignado correctamente a los pedidos seleccionados");
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      setRowSelection({});
-      setSelectedDriver("");
-    },
-    onError: (err: any) => {
-      const msg = err.response?.data?.message || "Error al asignar chofer";
-      toast.error(msg);
-    },
-  });
-
-  // 4. Mutación para iniciar recorrido de pedido
-  const startRouteMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      await api.put(`/orders/${orderId}/status`, { estado: "IN_TRANSIT" });
-    },
-    onSuccess: () => {
-      toast.success("Recorrido iniciado correctamente");
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-    },
-    onError: (err: any) => {
-      const msg = err.response?.data?.message || "Error al iniciar el recorrido";
-      toast.error(msg);
-    },
-  });
-
-  useEffect(() => {
-    setSelectionOrder((prev) => {
-      const stillSelected = prev.filter((id) => rowSelection[id]);
-      const newIds = Object.keys(rowSelection).filter(
-        (id) => rowSelection[id] && !prev.includes(id)
-      );
-      return [...stillSelected, ...newIds];
-    });
-  }, [rowSelection]);
+  const startRouteMutation = useStartRouteMutation();
 
   const columns = [
-    {
-      id: "select",
-      header: ({ table }: any) => (
-        <div className="flex justify-center">
-          <input
-            type="checkbox"
-            checked={table.getIsAllPageRowsSelected()}
-            onChange={table.getToggleAllPageRowsSelectedHandler()}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
-          />
-        </div>
-      ),
-      cell: ({ row }: any) => {
-        const index = selectionOrder.indexOf(row.id);
-        const orderNumber = index !== -1 ? index + 1 : null;
-        
-        return (
-          <div className="px-1 flex items-center justify-center gap-1.5 min-w-[32px]">
-            <input
-              type="checkbox"
-              checked={row.getIsSelected()}
-              disabled={!row.getCanSelect()}
-              onChange={row.getToggleSelectedHandler()}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-600 disabled:opacity-30 cursor-pointer"
-            />
-            {orderNumber ? (
-              <span className="w-4 h-4 bg-accent text-white text-[10px] font-bold flex items-center justify-center rounded-sm shadow-sm transition-all animate-in zoom-in">
-                {orderNumber}
-              </span>
-            ) : (
-              <span className="w-4 h-4" />
-            )}
-          </div>
-        );
-      },
-      meta: { align: "center" }
-    },
-    { header: "Nº Pedido", accessorKey: "codigo" },
+    { header: "Nº Pedido", accessorKey: "code" },
     { 
       header: "Guía", 
-      accessorKey: "guia", 
+      accessorKey: "waybill", 
       cell: (info: any) => {
         const val = info.getValue();
         return val ? <span className="font-mono text-gray-500">#{val}</span> : <span className="text-gray-400">-</span>;
@@ -135,42 +47,96 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
     },
     { 
       header: "Cliente", 
-      accessorFn: (row: any) => row.cliente?.nombre || "-" 
+      accessorFn: (row: any) => {
+        if (row.recipientCustomerType === "INDIVIDUAL") {
+          return row.recipientName ?? "—";
+        }
+        return row.customer?.name ?? "—";
+      },
+      cell: (info: any) => {
+        const row = info.row.original;
+        const mainName =
+          row.recipientCustomerType === "INDIVIDUAL"
+            ? (row.recipientName ?? "—")
+            : (row.customer?.name ?? "—");
+
+        return (
+          <span className="font-bold text-gray-900 dark:text-white">
+            {mainName}
+          </span>
+        );
+      }
     },
     { 
       header: "Dirección de Entrega", 
-      accessorKey: "direccionOriginal" 
+      accessorFn: (row: any) => row.formattedAddress || row.rawAddress || "-",
+      cell: (info: any) => {
+        const row = info.row.original;
+        
+        // Preferencia de visualización en UI (dirección formateada de geocoding o cruda)
+        let displayAddress = row.formattedAddress;
+        if (!displayAddress || displayAddress.startsWith("http")) {
+          displayAddress = row.rawAddress;
+        }
+        if (!displayAddress || displayAddress.startsWith("http")) {
+          displayAddress = row.latitude && row.longitude 
+            ? `Ubicación GPS (${Number(row.latitude).toFixed(3)}, ${Number(row.longitude).toFixed(3)})`
+            : "Dirección de entrega";
+        }
+
+        // Resolver la URL de Google Maps
+        let mapsUrl = "";
+        if (row.rawAddress && row.rawAddress.startsWith("http")) {
+          mapsUrl = row.rawAddress;
+        } else if (row.latitude && row.longitude) {
+          mapsUrl = `https://www.google.com/maps/search/?api=1&query=${row.latitude},${row.longitude}`;
+        } else if (displayAddress && !displayAddress.startsWith("http")) {
+          mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayAddress)}`;
+        }
+
+        return (
+          <div className="flex items-start gap-1.5 max-w-xs">
+            {mapsUrl && (
+              <a 
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                title="Ver ubicación en el mapa"
+                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:scale-110 transition-transform shrink-0 mt-0.5"
+              >
+                <IconMapPin size={16} />
+              </a>
+            )}
+            <span className="font-bold text-gray-900 dark:text-white leading-snug line-clamp-2">
+              {displayAddress}
+            </span>
+          </div>
+        );
+      }
     },
     { 
       header: "Chofer", 
-      accessorFn: (row: any) => row.driver?.usuario?.nombre || <span className="text-gray-400 font-medium">No asignado</span> 
+      accessorFn: (row: any) => row.driver?.name || "No asignado",
+      cell: (info: any) => {
+        const val = info.row.original.driver?.name;
+        return val ? (
+          <span className="font-bold text-gray-900 dark:text-white">{val}</span>
+        ) : (
+          <span className="text-gray-400 font-medium">No asignado</span>
+        );
+      }
     },
     { 
       header: "Estado", 
-      accessorKey: "estado", 
+      accessorKey: "status", 
       cell: (info: any) => {
         const val = info.getValue();
-        const labelMap: Record<string, string> = {
-          PENDING: "Pendiente",
-          IN_TRANSIT: "En camino",
-          DELIVERED: "Entregado",
-          FAILED: "Fallido",
-        };
-        const label = labelMap[val] || val;
+        const statusConfig = getOrderStatusConfig(val);
 
         return (
-          <Badge 
-            variant={
-              val === "PENDING" 
-                ? "default" 
-                : val === "IN_TRANSIT" 
-                ? "warning" 
-                : val === "DELIVERED" 
-                ? "success" 
-                : "danger"
-            }
-          >
-            {label}
+          <Badge variant={statusConfig.variant}>
+            {statusConfig.label}
           </Badge>
         );
       } 
@@ -179,36 +145,42 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
       header: "Acciones", 
       accessorKey: "actions", 
       meta: { align: "center" },
-      cell: (info: any) => (
-        <div className="flex items-center justify-center gap-3">
-          <button 
-            title="Ver Detalles"
-            className="text-gray-400 hover:text-accent transition-colors cursor-pointer"
-            onClick={() => {
-              setActiveOrderId(info.row.original.id);
-              setDrawerOpen(true);
-            }}
-          >
-            <IconEye size={18} stroke={2} />
-          </button>
-          <button 
-            title="Editar Pedido"
-            className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-            onClick={() => onEdit && onEdit(info.row.original)}
-          >
-            <IconPencil size={18} stroke={2} />
-          </button>
-          {info.row.original.estado === "PENDING" && (
+      cell: (info: any) => {
+        const order = info.row.original;
+        const isEditable = order.status === ORDER_STATUS.PENDING;
+
+        return (
+          <div className="flex items-center justify-center gap-3">
             <button 
-              title="Iniciar Recorrido"
-              className="text-gray-400 hover:text-emerald-500 transition-colors cursor-pointer"
-              onClick={() => startRouteMutation.mutate(info.row.original.id)}
+              title="Ver Detalles"
+              className="text-gray-400 hover:text-accent transition-colors cursor-pointer"
+              onClick={() => {
+                setActiveOrderId(order.id);
+                setDrawerOpen(true);
+              }}
             >
-              <IconPlayerPlay size={18} stroke={2} />
+              <IconEye size={18} stroke={2} />
             </button>
-          )}
-        </div>
-      ) 
+            {isEditable ? (
+              <button 
+                title="Editar Pedido"
+                className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                onClick={() => onEdit && onEdit(order)}
+              >
+                <IconPencil size={18} stroke={2} />
+              </button>
+            ) : (
+              <button 
+                disabled
+                title="Solo se pueden editar pedidos en estado Pendiente"
+                className="text-gray-300 dark:text-gray-600 opacity-60 cursor-default select-none pointer-events-none"
+              >
+                <IconPencil size={18} stroke={1.6} />
+              </button>
+            )}
+          </div>
+        );
+      } 
     },
   ];
 
@@ -216,7 +188,7 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
   const driverOptions = [
     { label: "Seleccionar chofer...", value: "" },
     ...drivers.map((d: any) => ({
-      label: `${d.usuario?.nombre || "Chofer"} (${d.unidad || "Sin unidad"})`,
+      label: `${d.name || "Sin nombre"} (${d.unit || "Sin unidad"})`,
       value: d.id,
     })),
   ];
@@ -274,7 +246,7 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
           isLoading={isLoading} 
           rowSelection={rowSelection}
           onRowSelectionChange={setRowSelection}
-          enableRowSelection={(row) => row.original.estado === "PENDING"}
+          enableRowSelection={(row) => row.original.status === ORDER_STATUS.PENDING}
         />
       </div>
 

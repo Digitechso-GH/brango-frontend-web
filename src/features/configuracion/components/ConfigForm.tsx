@@ -3,8 +3,7 @@ import { Input } from "@/shared/components/ui/Input";
 import { Toggle } from "@/shared/components/ui/Toggle";
 
 export const ConfigForm = () => {
-  const [ping1, setPing1] = useState(false);
-  const [ping2, setPing2] = useState(true);
+  const [pingOption, setPingOption] = useState<"5s" | "1m" | "2m">("5s");
   const [eta, setEta] = useState(false);
 
   return (
@@ -36,20 +35,31 @@ export const ConfigForm = () => {
           <p className="text-xs text-gray-500">Intervalo de envío de ubicación en segundo plano. Un intervalo mayor ahorra batería y datos móviles; uno menor da más precisión al mapa histórico.</p>
         </div>
 
+        {/* Opción 5 Segundos (Testeo en vivo) */}
+        <div className="flex items-center justify-between py-4 border-t border-gray-100 dark:border-[#2D2D3D]">
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-bold text-amber-600 dark:text-amber-400">⚡ Cada 5 segundos (Modo Testeo / Prueba en vivo)</span>
+            <span className="text-xs text-gray-500">Máxima fluidez en mapa para pruebas directas.</span>
+          </div>
+          <Toggle checked={pingOption === "5s"} onChange={() => setPingOption("5s")} />
+        </div>
+
+        {/* Opción 1 Minuto */}
         <div className="flex items-center justify-between py-4 border-t border-gray-100 dark:border-[#2D2D3D]">
           <div className="flex flex-col gap-1">
             <span className="text-sm font-bold text-gray-900 dark:text-white">Cada 1 minuto</span>
-            <span className="text-xs text-gray-500">Mayor precisión, mayor consumo</span>
+            <span className="text-xs text-gray-500">Mayor precisión, mayor consumo.</span>
           </div>
-          <Toggle checked={ping1} onChange={(val) => { setPing1(val); if (val) setPing2(false); }} />
+          <Toggle checked={pingOption === "1m"} onChange={() => setPingOption("1m")} />
         </div>
 
+        {/* Opción 2 Minutos */}
         <div className="flex items-center justify-between py-4 border-t border-gray-100 dark:border-[#2D2D3D]">
           <div className="flex flex-col gap-1">
             <span className="text-sm font-bold text-gray-900 dark:text-white">Cada 2 minutos (recomendado)</span>
-            <span className="text-xs text-gray-500">Balance entre precisión y batería</span>
+            <span className="text-xs text-gray-500">Balance entre precisión y batería.</span>
           </div>
-          <Toggle checked={ping2} onChange={(val) => { setPing2(val); if (val) setPing1(false); }} />
+          <Toggle checked={pingOption === "2m"} onChange={() => setPingOption("2m")} />
         </div>
       </div>
 

@@ -44,18 +44,20 @@ export function handleBackendErrors<TFieldValues extends FieldValues>(
     const lowerMsg = errorMsg.toLowerCase();
     let guessedField: Path<TFieldValues> | null = null;
 
-    if (lowerMsg.includes("ruc")) {
+    if (lowerMsg.includes("pedido") || lowerMsg.includes("código") || lowerMsg.includes("codigo") || lowerMsg.includes("code")) {
+      guessedField = "code" as Path<TFieldValues>;
+    } else if (lowerMsg.includes("ruc")) {
       guessedField = "ruc" as Path<TFieldValues>;
     } else if (lowerMsg.includes("email") || lowerMsg.includes("correo") || lowerMsg.includes("usuario")) {
       guessedField = "email" as Path<TFieldValues>;
     } else if (lowerMsg.includes("teléfono") || lowerMsg.includes("telefono") || lowerMsg.includes("phone")) {
-      guessedField = "telefono" as Path<TFieldValues>;
+      guessedField = "phone" as Path<TFieldValues>;
     } else if (lowerMsg.includes("contraseña") || lowerMsg.includes("password")) {
       guessedField = "password" as Path<TFieldValues>;
-    } else if (lowerMsg.includes("unidad") || lowerMsg.includes("placa") || lowerMsg.includes("vehículo")) {
-      guessedField = "unidad" as Path<TFieldValues>;
-    } else if (lowerMsg.includes("razón social") || lowerMsg.includes("nombre")) {
-      guessedField = "nombre" as Path<TFieldValues>;
+    } else if (lowerMsg.includes("unidad") || lowerMsg.includes("placa") || lowerMsg.includes("vehículo") || lowerMsg.includes("unit")) {
+      guessedField = "unit" as Path<TFieldValues>;
+    } else if (lowerMsg.includes("razón social") || lowerMsg.includes("nombre") || lowerMsg.includes("name")) {
+      guessedField = "name" as Path<TFieldValues>;
     }
 
     if (guessedField) {

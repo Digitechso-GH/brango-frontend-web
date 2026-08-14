@@ -1,125 +1,354 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "@/shared/api/axios";
-import { IconMapPinFilled } from "@tabler/icons-react";
-import { io } from "socket.io-client";
+import React, { useState, useEffect, useRef } from "react";
+import { GoogleMapView } from "@/shared/integrations/google/components/GoogleMapView";
+import { useDriverTrackingSocket } from "../hooks/useDriverTrackingSocket";
+import { useMapRoute } from "../hooks/useMapRoute";
+import { useDriversQuery, usePedidosQuery } from "@/features/pedidos/hooks/usePedidosQueries";
+import { ORDER_STATUS_DETAILS } from "@/shared/constants/order-status";
 
-export const MapView = () => {
-  const [locations, setLocations] = useState<Record<string, any>>({});
+interface MapViewProps {
+  focusedOrder?: any | null;
+}
 
-  // 1. Cargar choferes para mapear nombres
-  const { data: drivers = [] } = useQuery({
-    queryKey: ["drivers"],
-    queryFn: async () => {
-      const res = await api.get("/drivers");
-      return res.data.data || [];
-    },
+const TRUCK_MARKER_HTML = (color: string) => `
+  <div style="background: ${color}; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 14px rgba(0,0,0,0.35); cursor: pointer;">
+    <span style="font-size: 22px; line-height: 1;">🚚</span>
+  </div>
+`;
+
+const DESTINATION_MARKER_HTML = (color: string) => `
+  <div style="background: ${color}; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer;">
+    <span style="font-size: 18px; line-height: 1;">📍</span>
+  </div>
+`;
+
+function createAdvancedMarker(options: {
+  position: { lat: number; lng: number };
+  map: google.maps.Map;
+  title: string;
+  htmlContent: string;
+}): google.maps.marker.AdvancedMarkerElement {
+  const container = document.createElement("div");
+  container.innerHTML = options.htmlContent.trim();
+
+  return new google.maps.marker.AdvancedMarkerElement({
+    position: options.position,
+    map: options.map,
+    title: options.title,
+    content: container,
   });
+}
 
-  // 2. Escuchar WebSockets para ubicaciones en tiempo real
+export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
+  const [googleMap, setGoogleMap] = useState<google.maps.Map | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [timeTick, setTimeTick] = useState(0); // Reloj para actualizar visualmente la última vez visto en tiempo real
+
+  const { locations } = useDriverTrackingSocket();
+  const { data: drivers = [] } = useDriversQuery();
+  const { data: allTodayOrders = [] } = usePedidosQuery({ todayOnly: true });
+  const { drawMultiStopRoute, clearRoute } = useMapRoute(googleMap);
+
+  const markersRef = useRef<any[]>([]);
+
+  // Temporizador para recalcular y re-renderizar el tiempo relativo transcurrido en el UI cada 60s
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001";
-    const devToken = process.env.NEXT_PUBLIC_DEV_MOCK_TOKEN || "operator-mock-token";
-    const socket = io(wsUrl, {
-      auth: { token: devToken },
-    });
-
-    socket.on("connect", () => {
-      console.log("Conectado a Torre de Control Gateway (WebSocket).");
-    });
-
-    socket.on("driver_location", (data) => {
-      console.log("Ubicación recibida en tiempo real:", data);
-      setLocations((prev) => ({
-        ...prev,
-        [data.driverId]: data,
-      }));
-    });
-
-    return () => {
-      socket.disconnect();
-    };
+    const interval = setInterval(() => {
+      setTimeTick((prev) => prev + 1);
+    }, 60000);
+    return () => clearInterval(interval);
   }, []);
 
-  const getDriverLabel = (driverId: string) => {
-    const driver = drivers.find((d: any) => d.id === driverId);
-    if (!driver) return "Chofer";
-    const nameParts = (driver.usuario?.nombre || "").split(" ");
-    return nameParts[0] || "Chofer";
-  };
+  const fitMapToBoundsForOrder = (order: any, map: google.maps.Map) => {
+    const orderLat = order?.latitude !== null && order?.latitude !== undefined ? Number(order.latitude) : null;
+    const orderLng = order?.longitude !== null && order?.longitude !== undefined ? Number(order.longitude) : null;
 
-  const getPercentCoords = (lat?: number, lng?: number) => {
-    if (lat === undefined || lng === undefined) {
-      return { top: "50%", left: "50%" };
+    if (!order || orderLat === null || orderLng === null || !map) return;
+
+    const destPos = { lat: orderLat, lng: orderLng };
+    const driverId = order.driverId;
+    const assignedDriver = driverId ? drivers.find((d: any) => d.id === driverId) : null;
+    const livePos = driverId ? locations[driverId] : null;
+
+    const originLat = livePos?.latitude ?? order.originLatitude ?? assignedDriver?.latitude;
+    const originLng = livePos?.longitude ?? order.originLongitude ?? assignedDriver?.longitude;
+
+    if (originLat !== null && originLat !== undefined && originLng !== null && originLng !== undefined) {
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend(destPos);
+      bounds.extend({ lat: Number(originLat), lng: Number(originLng) });
+      map.fitBounds(bounds, { top: 80, right: 80, bottom: 80, left: 80 });
+    } else {
+      map.panTo(destPos);
+      map.setZoom(16);
     }
-    // Rango de Lima Metropolitana
-    const minLat = -12.15;
-    const maxLat = -12.0;
-    const minLng = -77.1;
-    const maxLng = -77.0;
-
-    const boundedLat = Math.max(minLat, Math.min(maxLat, lat));
-    const boundedLng = Math.max(minLng, Math.min(maxLng, lng));
-
-    // Latitud sur es minLat (abajo), norte es maxLat (arriba)
-    const top = 100 - ((boundedLat - minLat) / (maxLat - minLat)) * 100;
-    const left = ((boundedLng - minLng) / (maxLng - minLng)) * 100;
-
-    // Clampear entre 10% y 90% para evitar salirse de los bordes del contenedor
-    return {
-      top: `${Math.max(10, Math.min(90, top))}%`,
-      left: `${Math.max(10, Math.min(90, left))}%`,
-    };
   };
+
+  // Sincronizar pedido enfocado desde la lista lateral
+  useEffect(() => {
+    if (focusedOrder) {
+      setSelectedOrder(focusedOrder);
+      if (googleMap) {
+        fitMapToBoundsForOrder(focusedOrder, googleMap);
+      }
+    }
+  }, [focusedOrder, googleMap]);
+
+  // Renderizar marcadores de choferes (🚚) y pedidos activos en el mapa
+  useEffect(() => {
+    if (!googleMap) return;
+
+    clearRoute();
+
+    // Limpiar marcadores anteriores
+    markersRef.current.forEach((m) => {
+      if (m.setMap) m.setMap(null);
+      else if ("map" in m) m.map = null;
+    });
+    markersRef.current = [];
+
+    const infoWindow = new google.maps.InfoWindow();
+    googleMap.addListener("click", () => infoWindow.close());
+
+    // 1. Mapear choferes activos y sus posiciones GPS con "última vez visto"
+    const activeDriverPositions: Record<
+      string,
+      {
+        lat: number;
+        lng: number;
+        name: string;
+        statusColor: string;
+        lastSeenText: string;
+        updatedAt?: Date;
+      }
+    > = {};
+
+    drivers.forEach((driver: any) => {
+      const livePos = locations[driver.id];
+      const driverName = driver.name || "Sin nombre";
+      const lat = livePos?.latitude ?? driver.latitude;
+      const lng = livePos?.longitude ?? driver.longitude;
+
+      if (lat !== null && lat !== undefined && lng !== null && lng !== undefined) {
+        let statusColor = "#EF4444";
+        let lastSeenText = "Sin señal reciente";
+
+        if (livePos?.updatedAt) {
+          const diffMs = Date.now() - new Date(livePos.updatedAt).getTime();
+          const minutes = Math.floor(diffMs / 60000);
+
+          if (minutes < 5) {
+            statusColor = "#3D5FFF";
+            lastSeenText = minutes === 0 ? "hace instantes" : `hace ${minutes} min`;
+          } else if (minutes <= 15) {
+            statusColor = "#F59E0B";
+            lastSeenText = `hace ${minutes} min`;
+          } else {
+            statusColor = "#EF4444";
+            lastSeenText = minutes >= 60 ? `hace ${Math.floor(minutes / 60)}h` : `hace ${minutes} min`;
+          }
+        }
+
+        activeDriverPositions[driver.id] = {
+          lat: Number(lat),
+          lng: Number(lng),
+          name: driverName,
+          statusColor,
+          lastSeenText,
+          updatedAt: livePos?.updatedAt,
+        };
+      }
+    });
+
+    // Dibujar cada Chofer en el mapa con su respectivo color según inactividad
+    Object.entries(activeDriverPositions).forEach(([id, posInfo]) => {
+      const truckMarker = createAdvancedMarker({
+        position: { lat: posInfo.lat, lng: posInfo.lng },
+        map: googleMap,
+        title: `🚚 ${posInfo.name}`,
+        htmlContent: TRUCK_MARKER_HTML(posInfo.statusColor),
+      });
+
+      truckMarker.addListener("gmp-click", () => {
+        infoWindow.setContent(`
+          <div style="color: #111; padding: 6px 8px; font-family: sans-serif; font-size: 13px;">
+            <p style="margin: 0 0 3px 0; color: #333;">Chofer: <b>${posInfo.name}</b></p>
+            <p style="margin: 0; color: #333;">Última posición: <b style="color: ${posInfo.statusColor};">${posInfo.lastSeenText}</b></p>
+          </div>
+        `);
+        infoWindow.open(googleMap, truckMarker);
+      });
+
+      markersRef.current.push(truckMarker);
+    });
+
+    // 2. Si hay un Pedido Seleccionado / Enfocado
+    const orderLat = selectedOrder?.latitude !== null && selectedOrder?.latitude !== undefined ? Number(selectedOrder.latitude) : null;
+    const orderLng = selectedOrder?.longitude !== null && selectedOrder?.longitude !== undefined ? Number(selectedOrder.longitude) : null;
+
+    if (selectedOrder && orderLat !== null && orderLng !== null) {
+      const order = selectedOrder;
+      const destPos = { lat: orderLat, lng: orderLng };
+
+      const cleanMatrizText = (text?: string | null) => {
+        if (!text) return "";
+        return text.replace(/\s*-\s*Matriz/gi, "").replace(/\s*Matriz/gi, "").trim();
+      };
+
+      const getClientName = (ord: any): string => {
+        if (!ord) return "";
+        const rawName = ord.recipientCustomerType === "INDIVIDUAL" ? ord.recipientName : ord.customer?.name;
+        return cleanMatrizText(rawName || "");
+      };
+
+      const driverId = order.driverId;
+      const assignedDriver = driverId ? drivers.find((d: any) => d.id === driverId) : null;
+      const liveDriverPos = driverId ? activeDriverPositions[driverId] : null;
+
+      // Resolver coordenadas de origen del chofer
+      const originCoords = liveDriverPos
+        ? { lat: liveDriverPos.lat, lng: liveDriverPos.lng }
+        : (order.originLatitude && order.originLongitude)
+          ? { lat: Number(order.originLatitude), lng: Number(order.originLongitude) }
+          : (assignedDriver && assignedDriver.latitude && assignedDriver.longitude)
+            ? { lat: Number(assignedDriver.latitude), lng: Number(assignedDriver.longitude) }
+            : null;
+
+      // SI EXISTEN COORDENADAS DEL CHOFER: Dibujar paradas pendientes/en tránsito y polilínea multiparada
+      if (originCoords) {
+        const existingTruck = markersRef.current.find((m) => {
+          const pos = m.position;
+          return pos && Math.abs(pos.lat - originCoords.lat) < 0.0001 && Math.abs(pos.lng - originCoords.lng) < 0.0001;
+        });
+
+        if (!existingTruck) {
+          const driverName = assignedDriver?.name ?? liveDriverPos?.name ?? "Sin nombre";
+          const statusColor = liveDriverPos?.statusColor || "#EF4444";
+          const truckMarker = createAdvancedMarker({
+            position: originCoords,
+            map: googleMap,
+            title: `🚚 ${driverName}`,
+            htmlContent: TRUCK_MARKER_HTML(statusColor),
+          });
+          markersRef.current.push(truckMarker);
+        }
+
+        // Obtener únicamente los pedidos pendientes o en tránsito del chofer para el día
+        const activeDriverOrders = allTodayOrders.filter((o: any) => {
+          const rawSt = String(o.status || "PENDING").toUpperCase();
+          const isFinished = rawSt === "DELIVERED" || rawSt === "FAILED" || rawSt === "OBSERVED";
+          return (
+            o.driverId === driverId &&
+            !isFinished &&
+            o.latitude !== null &&
+            o.latitude !== undefined &&
+            o.longitude !== null &&
+            o.longitude !== undefined
+          );
+        });
+
+        // Ordenar estrictamente por sequenceIndex
+        activeDriverOrders.sort(
+          (a: any, b: any) => (a.sequenceIndex ?? 0) - (b.sequenceIndex ?? 0)
+        );
+
+        const routeWaypoints: Array<{ lat: number; lng: number }> = [originCoords];
+
+        if (activeDriverOrders.length > 0) {
+          activeDriverOrders.forEach((actOrd: any, idx: number) => {
+            const pt = { lat: Number(actOrd.latitude), lng: Number(actOrd.longitude) };
+            routeWaypoints.push(pt);
+
+            const statusDetail = ORDER_STATUS_DETAILS[actOrd.status] || ORDER_STATUS_DETAILS.PENDING;
+            const clienteNombre = getClientName(actOrd);
+
+            const destMarker = createAdvancedMarker({
+              position: pt,
+              map: googleMap,
+              title: `📍 Parada ${idx + 1}: ${actOrd.code}`,
+              htmlContent: DESTINATION_MARKER_HTML(statusDetail.color),
+            });
+
+            destMarker.addListener("gmp-click", () => {
+              infoWindow.setContent(`
+                <div style="color: #111; padding: 6px 8px; font-family: sans-serif; font-size: 13px;">
+                  <p style="margin: 0 0 3px 0; color: #333;">Parada ${idx + 1} - Cliente: <b>${clienteNombre}</b></p>
+                  <p style="margin: 0; color: #333;">Estado: <b style="color:${statusDetail.color}">${statusDetail.label}</b></p>
+                </div>
+              `);
+              infoWindow.open(googleMap, destMarker);
+            });
+
+            markersRef.current.push(destMarker);
+          });
+        } else {
+          routeWaypoints.push(destPos);
+
+          const statusDetail = ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;
+          const clienteNombre = getClientName(order);
+
+          const destMarker = createAdvancedMarker({
+            position: destPos,
+            map: googleMap,
+            title: `📍 Pedido: ${order.code}`,
+            htmlContent: DESTINATION_MARKER_HTML(statusDetail.color),
+          });
+
+          destMarker.addListener("gmp-click", () => {
+            infoWindow.setContent(`
+              <div style="color: #111; padding: 6px 8px; font-family: sans-serif; font-size: 13px;">
+                <p style="margin: 0 0 3px 0; color: #333;">Cliente: <b>${clienteNombre}</b></p>
+                <p style="margin: 0; color: #333;">Estado: <b style="color:${statusDetail.color}">${statusDetail.label}</b></p>
+              </div>
+            `);
+            infoWindow.open(googleMap, destMarker);
+          });
+
+          markersRef.current.push(destMarker);
+        }
+
+        // Trazar la polilínea multiparada
+        if (routeWaypoints.length >= 2) {
+          drawMultiStopRoute(routeWaypoints);
+        }
+      } else {
+        // CHOFER SIN UBICACIÓN REGISTRADA: Mostrar únicamente la parada de destino (📍)
+        const statusDetail = ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;
+        const clienteNombre = getClientName(order);
+
+        const destMarker = createAdvancedMarker({
+          position: destPos,
+          map: googleMap,
+          title: `📍 Parada: ${order.code}`,
+          htmlContent: DESTINATION_MARKER_HTML(statusDetail.color),
+        });
+
+        destMarker.addListener("gmp-click", () => {
+          infoWindow.setContent(`
+            <div style="color: #111; padding: 6px 8px; font-family: sans-serif; font-size: 13px;">
+              <p style="margin: 0 0 3px 0; color: #333;">Cliente: <b>${clienteNombre}</b></p>
+              <p style="margin: 0; color: #333;">Estado: <b style="color:${statusDetail.color}">${statusDetail.label}</b></p>
+            </div>
+          `);
+          infoWindow.open(googleMap, destMarker);
+        });
+
+        markersRef.current.push(destMarker);
+      }
+    }
+  }, [googleMap, selectedOrder, locations, drivers, allTodayOrders, timeTick]);
+
+  const activeMapId = "DEMO_MAP_ID";
 
   return (
-    <div className="bg-gray-100 dark:bg-[#20202A] h-full min-h-[500px] rounded-2xl border border-gray-200 dark:border-[#2D2D3D] flex items-center justify-center relative overflow-hidden">
-      <div 
-        className="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none" 
-        style={{ 
-          backgroundImage: "radial-gradient(#4f46e5 1px, transparent 1px)", 
-          backgroundSize: "20px 20px" 
-        }}
+    <div className="relative w-full h-full min-h-[500px]">
+      <GoogleMapView
+        mapId={activeMapId}
+        onMapLoad={(map) => setGoogleMap(map)}
       />
-      
-      {Object.keys(locations).length === 0 ? (
-        <div className="text-center z-10 flex flex-col items-center gap-3">
-          <div className="w-16 h-16 bg-white dark:bg-[#1A1A24] rounded-full flex items-center justify-center shadow-lg border border-gray-100 dark:border-[#2D2D3D] text-accent animate-pulse">
-            <IconMapPinFilled size={32} />
-          </div>
-          <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
-            Esperando transmisión GPS de choferes activos...
-          </p>
-        </div>
-      ) : (
-        <div className="absolute inset-0 z-10 pointer-events-none">
-          <div className="absolute bottom-4 left-4 bg-white dark:bg-[#1A1A24] px-3 py-1.5 rounded-lg shadow-md border border-gray-100 dark:border-[#2D2D3D] text-[10px] font-bold text-gray-500">
-            🟢 {Object.keys(locations).length} unidad(es) transmitiendo
-          </div>
-        </div>
-      )}
-
-      {/* Renderizar choferes en vivo */}
-      {Object.values(locations).map((loc) => {
-        const coords = getPercentCoords(loc.latitud, loc.longitud);
-        const label = getDriverLabel(loc.driverId);
-        return (
-          <div 
-            key={loc.driverId}
-            className="absolute w-10 h-10 -ml-5 -mt-5 flex flex-col items-center justify-center transition-all duration-1000 ease-in-out cursor-default"
-            style={{ top: coords.top, left: coords.left }}
-          >
-            <div className="bg-accent text-white px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider mb-0.5 shadow-sm">
-              {label}
-            </div>
-            <div className="text-accent animate-bounce">
-              <IconMapPinFilled size={24} />
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 };
+
+export default MapView;

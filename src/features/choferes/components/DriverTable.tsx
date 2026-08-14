@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import api from "@/shared/api/axios";
+import { choferesApi } from "../api/choferes.api";
 import { CleanTable } from "@/shared/components/ui/CleanTable";
 import { Badge } from "@/shared/components/ui/Badge";
 import { IconPencil } from "@tabler/icons-react";
@@ -14,35 +14,32 @@ interface DriverTableProps {
 export const DriverTable = ({ onEdit }: DriverTableProps) => {
   const { data: drivers = [], isLoading } = useQuery({
     queryKey: ["drivers"],
-    queryFn: async () => {
-      const res = await api.get("/drivers");
-      return res.data.data || [];
-    },
+    queryFn: choferesApi.getDrivers,
   });
 
   const columns = [
-    { 
-      header: "Nombre Completo", 
-      accessorFn: (row: any) => row.usuario?.nombre || "-" 
+    {
+      header: "Nombre Completo",
+      accessorFn: (row: any) => row.user?.name || row.usuario?.nombre || "-",
     },
-    { 
-      header: "Email / Usuario", 
-      accessorFn: (row: any) => row.usuario?.email || "-" 
+    {
+      header: "Email / Usuario",
+      accessorFn: (row: any) => row.user?.email || row.usuario?.email || "-",
     },
-    { 
-      header: "Teléfono", 
-      accessorKey: "telefono" 
+    {
+      header: "Teléfono",
+      accessorFn: (row: any) => row.phone || row.telefono || "-",
     },
-    { 
-      header: "Placa / Unidad", 
-      accessorKey: "unidad" 
+    {
+      header: "Placa / Unidad",
+      accessorFn: (row: any) => row.unit || row.unidad || "-",
     },
-    { 
-      header: "Estado", 
-      accessorKey: "status", 
+    {
+      header: "Estado",
+      accessorKey: "status",
       cell: () => {
         return <Badge variant="success">Activo</Badge>;
-      } 
+      },
     },
     {
       header: "Acciones",
@@ -58,8 +55,8 @@ export const DriverTable = ({ onEdit }: DriverTableProps) => {
             <IconPencil size={18} />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (

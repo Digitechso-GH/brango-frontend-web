@@ -1,21 +1,19 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ROUTES } from "@/shared/constants/routes";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { 
   IconMap2, 
   IconBox, 
-  IconFileSpreadsheet, 
   IconSteeringWheel, 
-  IconBuildingStore, 
   IconSettings,
-  IconLogout
+  IconLogout,
+  IconMapPinFilled
 } from "@tabler/icons-react";
-
 import { ThemeToggle } from "@/shared/components/ui/ThemeToggle";
-import { IconBell, IconMapPinFilled } from "@tabler/icons-react";
 
 interface MenuItem {
   label: string;
@@ -30,6 +28,25 @@ interface MenuGroup {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { token, user, logout, hasHydrated } = useAuthStore();
+
+  // Protección de rutas: redirigir a /login si no hay token o si el rol no es administrativo
+  useEffect(() => {
+    if (hasHydrated) {
+      if (!token) {
+        router.replace(ROUTES.LOGIN);
+      } else if (user?.role !== "SYS_ADMIN" && user?.role !== "SYS_OPERATOR") {
+        logout();
+        router.replace(ROUTES.LOGIN);
+      }
+    }
+  }, [hasHydrated, token, user, router, logout]);
+
+  const handleLogout = () => {
+    logout();
+    router.replace(ROUTES.LOGIN);
+  };
 
   const menuGroups: MenuGroup[] = [
     {
@@ -38,7 +55,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { label: "Torre de Control", path: ROUTES.ADMIN.TORRE_CONTROL, icon: <IconMap2 size={20} /> },
         { label: "Pedidos", path: ROUTES.ADMIN.PEDIDOS, icon: <IconBox size={20} /> },
         { label: "Choferes", path: ROUTES.ADMIN.CHOFERES, icon: <IconSteeringWheel size={20} /> },
-        { label: "Clientes", path: ROUTES.ADMIN.CLIENTES, icon: <IconBuildingStore size={20} /> },
       ],
     },
     {
@@ -51,6 +67,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const activeItem = menuGroups.flatMap(g => g.items).find(i => pathname.startsWith(i.path));
   const pageTitle = activeItem ? activeItem.label : "Panel de Control";
+
+  const userInitials = user?.name
+    ? user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()
+    : "AD";
+
+  const userRoleLabel = user?.role === "SYS_ADMIN"
+    ? "Administrador"
+    : user?.role === "SYS_OPERATOR"
+    ? "Operador Despachador"
+    : "Usuario";
+
+  if (!hasHydrated || !token) {
+    return (
+      <div className="h-screen w-screen bg-slate-50 dark:bg-[#0F0F17] flex items-center justify-center text-slate-400 text-sm font-sans">
+        Cargando...
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-[#13131A] overflow-hidden">
@@ -93,18 +127,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <div className="p-4 border-t border-gray-100 dark:border-[#2D2D3D] flex flex-col gap-2">
-          {/* Se oculta temporalmente el modo oscuro a pedido del usuario */}
           <div className="hidden">
             <ThemeToggle />
           </div>
           <div className="flex items-center gap-3 px-2 py-2">
             <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 text-accent flex items-center justify-center font-black text-xs border border-blue-100 dark:border-blue-900/50 shrink-0">
-              LC
+              {userInitials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight truncate">Luna Campos</p>
-              <p className="text-[10px] font-medium text-gray-500 truncate">Despachador</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight truncate">{user?.name || "Administrador"}</p>
+              <p className="text-[10px] font-medium text-gray-500 truncate">{userRoleLabel}</p>
             </div>
+            <button
+              onClick={handleLogout}
+              title="Cerrar Sesión"
+              className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
+            >
+              <IconLogout size={18} />
+            </button>
           </div>
         </div>
       </aside>
@@ -116,13 +156,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">{pageTitle}</h2>
           
           <div className="flex items-center gap-3">
-            <div className="pl-4 border-l border-gray-200 dark:border-[#2D2D3D]">
-              {/* 
-              <button className="flex items-center justify-center w-10 h-10 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors group">
-                <IconLogout size={20} className="text-gray-400 group-hover:text-red-500 transition-colors" />
-              </button>
-              */}
-            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer border border-slate-200 dark:border-slate-800"
+            >
+              <IconLogout size={16} />
+              Cerrar Sesión
+            </button>
           </div>
         </header>
 

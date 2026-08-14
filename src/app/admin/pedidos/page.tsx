@@ -5,9 +5,11 @@ import { Button } from "@/shared/components/ui/Button";
 import { IconPlus, IconFileExport } from "@tabler/icons-react";
 import { OrderTable } from "@/features/pedidos/components/OrderTable";
 import { OrderDrawer } from "@/features/pedidos/components/OrderDrawer";
-import api from "@/shared/api/axios";
+import { pedidosApi } from "@/features/pedidos/api/pedidos.api";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+
+import { API_ENDPOINTS } from "@/shared/constants/api-endpoints";
 
 export default function PedidosPage() {
   const queryClient = useQueryClient();
@@ -17,39 +19,41 @@ export default function PedidosPage() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const formData = new FormData();
-      formData.append("file", file);
+    if (!file) return;
 
-      const toastId = toast.loading("Subiendo y procesando archivo Excel...");
-      
-      api.post("/orders/import", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+    const toastId = toast.loading("Subiendo y procesando archivo Excel...");
+    
+    pedidosApi.importOrdersExcel(file)
+      .then((res) => {
+        const count = res.totalImportados || (Array.isArray(res) ? res.length : 1);
+        toast.success(`Importación exitosa: ${count} pedidos creados`, { id: toastId });
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
       })
-        .then((res) => {
-          const count = res.data.data?.length || 0;
-          toast.success(`Importación exitosa: ${count} pedidos creados`, { id: toastId });
-          queryClient.invalidateQueries({ queryKey: ["orders"] });
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-          }
-        })
-        .catch((err) => {
-          const resMessage = err.response?.data?.message;
-          if (resMessage?.code === "ERR_VALIDATION_FAILED" && Array.isArray(resMessage.details)) {
-            const firstErr = resMessage.details[0];
-            toast.error(`Fila ${firstErr.row}: ${firstErr.error}`, { id: toastId });
-          } else {
-            const msg = resMessage || "Ocurrió un error al importar el archivo";
-            toast.error(msg, { id: toastId });
-          }
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-          }
-        });
-    }
+      .catch((err) => {
+        toast.dismiss(toastId);
+        const resData = err.response?.data;
+        const errors = resData?.errors;
+
+        if (Array.isArray(errors) && errors.length > 0) {
+          const description = errors
+            .map((e: any) => (e.fila ? `Fila ${e.fila}: ${e.error}` : e.error || e))
+            .join(" | ");
+
+          toast.error(resData.message || "Error al importar el archivo Excel", {
+            description,
+            duration: 10000,
+          });
+        } else {
+          toast.error(resData?.message || err.message || "Error al importar el archivo Excel", {
+            duration: 6000,
+          });
+        }
+      })
+      .finally(() => {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      });
   };
 
   const handleEdit = (order: any) => {
@@ -78,7 +82,7 @@ export default function PedidosPage() {
             className="hidden" 
             accept=".xlsx,.xls,.csv" 
           />
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()} >
             <IconFileExport size={18} />
             Cargar Excel
           </Button>

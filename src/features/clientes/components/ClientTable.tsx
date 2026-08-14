@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import api from "@/shared/api/axios";
+import { clientesApi } from "../api/clientes.api";
 import { CleanTable } from "@/shared/components/ui/CleanTable";
 import { Badge } from "@/shared/components/ui/Badge";
 import { IconPencil } from "@tabler/icons-react";
@@ -14,28 +14,25 @@ interface ClientTableProps {
 export const ClientTable = ({ onEdit }: ClientTableProps) => {
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["companies"],
-    queryFn: async () => {
-      const res = await api.get("/customers/companies");
-      return res.data.data || [];
-    },
+    queryFn: clientesApi.getCompanies,
   });
 
   const columns = [
-    { header: "Razón Social", accessorKey: "nombre" },
+    { header: "Razón Social", accessorKey: "name" },
     { header: "RUC", accessorKey: "ruc" },
-    { 
-      header: "Sucursales registradas", 
+    {
+      header: "Sucursales registradas",
       accessorFn: (row: any) => {
-        const count = row.clientes?.length || 0;
+        const count = row.customers?.length || row.clientes?.length || 0;
         return count === 0 ? "1 (Matriz)" : `${count} sucursal(es)`;
-      }
+      },
     },
-    { 
-      header: "Estado", 
-      accessorKey: "status", 
+    {
+      header: "Estado",
+      accessorKey: "status",
       cell: () => {
         return <Badge variant="success">Activo</Badge>;
-      } 
+      },
     },
     {
       header: "Acciones",
@@ -51,8 +48,8 @@ export const ClientTable = ({ onEdit }: ClientTableProps) => {
             <IconPencil size={18} />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (

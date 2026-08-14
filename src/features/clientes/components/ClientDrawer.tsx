@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "@/shared/api/axios";
+import { clientesApi } from "../api/clientes.api";
 import { toast } from "sonner";
 import { BaseDrawer } from "@/shared/components/ui/BaseDrawer";
 import { Input } from "@/shared/components/ui/Input";
@@ -13,7 +13,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { handleBackendErrors } from "@/shared/utils/handleBackendErrors";
 
 const companySchema = z.object({
-  nombre: z.string().min(3, "La razón social debe tener al menos 3 caracteres"),
+  name: z.string().min(3, "La razón social debe tener al menos 3 caracteres"),
   ruc: z
     .string()
     .length(11, "El RUC debe tener exactamente 11 dígitos")
@@ -44,7 +44,7 @@ export const ClientDrawer = ({ isOpen, onClose, client }: ClientDrawerProps) => 
   useEffect(() => {
     if (isOpen) {
       reset({
-        nombre: client?.nombre || "",
+        name: client?.name || client?.nombre || "",
         ruc: client?.ruc || "",
       });
     }
@@ -54,25 +54,15 @@ export const ClientDrawer = ({ isOpen, onClose, client }: ClientDrawerProps) => 
   const saveMutation = useMutation({
     mutationFn: async (data: CompanyFormData) => {
       if (client) {
-        return api.put(`/customers/companies/${client.id}`, data);
+        return clientesApi.updateCompany(client.id, data);
       } else {
-        return api.post("/customers/companies", data);
+        return clientesApi.createCompany(data);
       }
     },
     onSuccess: (res: any) => {
-      const newCompany = res?.data?.data;
       toast.success(client ? "Cliente actualizado correctamente" : "Cliente registrado correctamente");
-      
-      if (newCompany) {
-        queryClient.setQueryData(["companies"], (oldData: any[] | undefined) => {
-          const list = oldData || [];
-          if (client) {
-            return list.map((c) => (c.id === newCompany.id ? newCompany : c));
-          } else {
-            return [...list, newCompany];
-          }
-        });
-      }
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
       onClose();
     },
     onError: (err: any) => {
@@ -110,8 +100,8 @@ export const ClientDrawer = ({ isOpen, onClose, client }: ClientDrawerProps) => 
         <Input
           label="Razón Social / Nombre"
           placeholder="Ej. Empresa Wong S.A."
-          error={errors.nombre?.message}
-          {...register("nombre")}
+          error={errors.name?.message}
+          {...register("name")}
         />
         <Input
           label="RUC"

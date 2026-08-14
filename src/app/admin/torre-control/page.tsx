@@ -9,22 +9,27 @@ import { OrderDetailDrawer } from "@/features/pedidos/components/OrderDetailDraw
 export default function TorreControlPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | undefined>();
+  const [focusedOrder, setFocusedOrder] = useState<any | null>(null);
 
   const handleSelectOrder = (orderId: string) => {
     setActiveOrderId(orderId);
     setDrawerOpen(true);
   };
 
+  const handleFocusOrder = (order: any) => {
+    setFocusedOrder(order);
+  };
+
   return (
-    <div className="flex flex-col gap-2 h-full">
+    <div className="flex flex-col gap-6 h-full">
       <StatsSummary />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1">
-        <div className="lg:col-span-3">
-          <MapView />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
+        <div className="lg:col-span-3 h-full">
+          <MapView focusedOrder={focusedOrder} />
         </div>
-        <div className="lg:col-span-1">
-          <OrderSideList onSelectOrder={handleSelectOrder} />
+        <div className="lg:col-span-1 h-full overflow-hidden">
+          <OrderSideList onSelectOrder={handleSelectOrder} onFocusOrder={handleFocusOrder} />
         </div>
       </div>
 

@@ -5,11 +5,12 @@
   --foreground: #171717;
 }
 
-@theme inline {
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: monospace;
+  
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
   
   --color-blue-50: #f0f3ff;
   --color-blue-100: #e0e7ff;
@@ -25,7 +26,35 @@
   
   --color-accent: var(--color-blue-600);
   --color-accent-dk: var(--color-blue-700);
-  
+
+  /* Escala Tipográfica Estandarizada Global (v4 @theme tokens) */
+  --text-micro: 9px;
+  --text-micro--line-height: 12px;
+
+  --text-nano: 10px;
+  --text-nano--line-height: 14px;
+
+  --text-caption: 11px;
+  --text-caption--line-height: 14px;
+
+  --text-label: 12px;
+  --text-label--line-height: 16px;
+
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+
+  --text-title: 16px;
+  --text-title--line-height: 22px;
+  --text-title--font-weight: 600;
+
+  --text-heading: 18px;
+  --text-heading--line-height: 24px;
+  --text-heading--font-weight: 700;
+
+  --text-display: 24px;
+  --text-display--line-height: 32px;
+  --text-display--font-weight: 700;
+
   --animate-in: animate-in 0.2s ease-out;
   --animate-out: animate-out 0.2s ease-in;
   --animate-fade-in: fade-in 0.2s ease-out;
@@ -35,17 +64,52 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+
+/* Google Places Autocomplete Dropdown styling and z-index fix */
+.pac-container {
+  z-index: 99999 !important;
+  font-family: var(--font-sans), system-ui, sans-serif !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #E2E8F0 !important;
+  margin-top: 4px !important;
+  padding: 4px !important;
+}
+
+.pac-item {
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  border-top: 1px solid #F1F5F9 !important;
+  border-radius: 0.5rem !important;
+}
+
+.pac-item:first-child {
+  border-top: none !important;
+}
+
+.pac-item:hover, .pac-item-selected {
+  background-color: #F0F3FF !important;
+}
+
+.pac-item-query {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #0F172A !important;
+}
+
+/* Ocultar el botón X por defecto en flotantes (InfoWindows) de Google Maps */
+.gm-ui-hover-effect {
+  display: none !important;
 }

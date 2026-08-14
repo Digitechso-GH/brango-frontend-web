@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "@/shared/api/axios";
+import { choferesApi } from "../api/choferes.api";
 import { toast } from "sonner";
 import { BaseDrawer } from "@/shared/components/ui/BaseDrawer";
 import { Input } from "@/shared/components/ui/Input";
@@ -13,10 +13,10 @@ import { Button } from "@/shared/components/ui/Button";
 import { handleBackendErrors } from "@/shared/utils/handleBackendErrors";
 
 const driverSchema = z.object({
-  nombre: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
+  name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   email: z.string().email("El correo electrónico no es válido"),
-  telefono: z.string().min(7, "El teléfono debe tener al menos 7 dígitos"),
-  unidad: z.string().min(4, "La placa/unidad debe tener al menos 4 caracteres"),
+  phone: z.string().min(7, "El teléfono debe tener al menos 7 dígitos"),
+  unit: z.string().min(4, "La placa/unidad debe tener al menos 4 caracteres"),
   password: z.string().optional(),
 }).refine((data) => {
   if (data.password && data.password.length > 0 && data.password.length < 6) {
@@ -53,18 +53,18 @@ export const DriverDrawer = ({ isOpen, onClose, driver }: DriverDrawerProps) => 
     if (isOpen) {
       if (driver) {
         reset({
-          nombre: driver.usuario?.nombre || "",
-          email: driver.usuario?.email || "",
-          telefono: driver.telefono || "",
-          unidad: driver.unidad || "",
+          name: driver.user?.name || driver.usuario?.nombre || "",
+          email: driver.user?.email || driver.usuario?.email || "",
+          phone: driver.phone || driver.telefono || "",
+          unit: driver.unit || driver.unidad || "",
           password: "",
         });
       } else {
         reset({
-          nombre: "",
+          name: "",
           email: "",
-          telefono: "",
-          unidad: "",
+          phone: "",
+          unit: "",
           password: "BRANGO-" + Math.random().toString(36).substring(2, 6).toUpperCase(),
         });
       }
@@ -81,25 +81,14 @@ export const DriverDrawer = ({ isOpen, onClose, driver }: DriverDrawerProps) => 
       }
 
       if (driver) {
-        return api.put(`/drivers/${driver.id}`, payload);
+        return choferesApi.updateDriver(driver.id, payload);
       } else {
-        return api.post("/drivers", payload);
+        return choferesApi.createDriver(payload);
       }
     },
-    onSuccess: (res: any) => {
-      const newDriver = res?.data?.data;
+    onSuccess: () => {
       toast.success(driver ? "Chofer actualizado correctamente" : "Chofer registrado correctamente");
-      
-      if (newDriver) {
-        queryClient.setQueryData(["drivers"], (oldData: any[] | undefined) => {
-          const list = oldData || [];
-          if (driver) {
-            return list.map((d) => (d.id === newDriver.id ? newDriver : d));
-          } else {
-            return [...list, newDriver];
-          }
-        });
-      }
+      queryClient.invalidateQueries({ queryKey: ["drivers"] });
       onClose();
     },
     onError: (err: any) => {
@@ -137,8 +126,8 @@ export const DriverDrawer = ({ isOpen, onClose, driver }: DriverDrawerProps) => 
         <Input
           label="Nombre Completo"
           placeholder="Ej. Juan Pérez"
-          error={errors.nombre?.message}
-          {...register("nombre")}
+          error={errors.name?.message}
+          {...register("name")}
         />
         <Input
           label="Correo / Usuario"
@@ -149,14 +138,14 @@ export const DriverDrawer = ({ isOpen, onClose, driver }: DriverDrawerProps) => 
         <Input
           label="Teléfono"
           placeholder="Ej. 999 999 999"
-          error={errors.telefono?.message}
-          {...register("telefono")}
+          error={errors.phone?.message}
+          {...register("phone")}
         />
         <Input
           label="Placa del Vehículo / Unidad"
           placeholder="Ej. ABC-123"
-          error={errors.unidad?.message}
-          {...register("unidad")}
+          error={errors.unit?.message}
+          {...register("unit")}
         />
 
         <div className="flex flex-col gap-2 mt-2">
