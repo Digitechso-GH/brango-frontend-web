@@ -37,7 +37,7 @@ export default function LoginPage() {
         email: email.trim().toLowerCase(),
         password: password.trim(),
       });
-      setAuth(res.token, res.user);
+      setAuth(res.token, res.refreshToken, res.user);
       toast.success(`¡Bienvenido de nuevo, ${res.user.name}!`);
       router.replace(ROUTES.ADMIN.TORRE_CONTROL);
     } catch (err: any) {

@@ -8,6 +8,7 @@ export interface LoginPayload {
 
 export interface LoginResponse {
   token: string;
+  refreshToken: string;
   user: {
     id: string;
     name: string;
@@ -25,6 +26,7 @@ export const authApi = {
     const rawUser = data.user || {};
     return {
       token: data.token,
+      refreshToken: data.refreshToken,
       user: {
         id: rawUser.id,
         name: rawUser.name || "",
@@ -33,6 +35,15 @@ export const authApi = {
         driverId: rawUser.driverId,
         unit: rawUser.unit,
       }
+    };
+  },
+
+  refresh: async (refreshToken: string): Promise<{ token: string; refreshToken: string }> => {
+    const res = await api.post(API_ENDPOINTS.AUTH.REFRESH, { refreshToken });
+    const data = res.data.data ?? res.data;
+    return {
+      token: data.token,
+      refreshToken: data.refreshToken,
     };
   },
 };
