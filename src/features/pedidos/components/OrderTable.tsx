@@ -237,7 +237,7 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {selectedOrderIds.length > 0 && (
         <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-3">
@@ -267,7 +267,7 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
         </div>
       )}
 
-      <div className="flex-1 bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm overflow-hidden flex flex-col">
         {/* Header con Buscador */}
         <div className="p-4 border-b border-gray-100 dark:border-[#2D2D3D] flex items-center justify-between">
           <div className="relative w-full max-w-md">

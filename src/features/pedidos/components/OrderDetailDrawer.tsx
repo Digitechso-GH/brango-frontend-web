@@ -15,6 +15,7 @@ import {
   IconCheck
 } from "@tabler/icons-react";
 import { GPSBrand } from "@/shared/components/ui/GPSBrand";
+import { Select } from "@/shared/components/ui/Select";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -386,19 +387,17 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
                 </p>
 
                 <div className="relative mb-6">
-                  <select
-                    className="w-full appearance-none bg-gray-50 dark:bg-[#13131A] border border-gray-200 dark:border-[#2D2D3D] text-gray-900 dark:text-white text-sm font-bold rounded-xl px-4 py-3.5 pr-10 outline-none focus:border-blue-500 transition-colors"
+                  <Select
+                    options={[
+                      { label: "Seleccionar un chofer...", value: "" },
+                      ...(drivers?.map((driver: any) => ({
+                        label: `${driver.name} ${driver.unit ? `- Unidad ${driver.unit}` : ""}`,
+                        value: driver.id
+                      })) || [])
+                    ]}
                     value={selectedDriverId}
-                    onChange={(e) => setSelectedDriverId(e.target.value)}
-                  >
-                    <option value="" disabled>Seleccionar un chofer...</option>
-                    {drivers?.map((driver: any) => (
-                      <option key={driver.id} value={driver.id}>
-                        {driver.name} {driver.unit ? `- Unidad ${driver.unit}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  <IconChevronDown size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    onChange={(val) => setSelectedDriverId(val)}
+                  />
                 </div>
 
                 <div className="relative mb-6">

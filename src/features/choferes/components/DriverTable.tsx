@@ -79,7 +79,7 @@ export const DriverTable = ({ onEdit }: DriverTableProps) => {
   ];
 
   return (
-    <div className="flex-1 bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm overflow-hidden flex flex-col">
+    <div className="bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm overflow-hidden flex flex-col">
       {/* Header con Buscador */}
       <div className="p-4 border-b border-gray-100 dark:border-[#2D2D3D] flex items-center justify-between">
         <div className="relative w-full max-w-md">
