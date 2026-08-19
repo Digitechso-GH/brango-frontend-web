@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useDriversQuery, usePedidosQuery } from "@/features/pedidos/hooks/usePedidosQueries";
+import { useDriversQuery, usePedidosTodayQuery } from "@/features/pedidos/hooks/usePedidosQueries";
 import { Select } from "@/shared/components/ui/Select";
 import { OrderCard } from "@/shared/components/ui/OrderCard";
 import {
@@ -18,7 +18,8 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
   const [selectedDriver, setSelectedDriver] = useState("all");
   const [status, setStatus] = useState("all");
 
-  const { data: orders = [], isLoading } = usePedidosQuery({ todayOnly: true });
+  const { data: ordersResponse, isLoading } = usePedidosTodayQuery();
+  const allTodayOrders = ordersResponse?.data || [];
   const { data: drivers = [] } = useDriversQuery();
 
   const driverOptions = [
@@ -31,7 +32,7 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
   ];
 
   // Filtrar pedidos según estado y chofer seleccionado
-  const filteredOrders = orders.filter((order: any) => {
+  const filteredOrders = allTodayOrders.filter((order: any) => {
     if (status !== "all") {
       const targetStatus = FRONTEND_TO_BACKEND_STATUS_MAP[status];
       if (order.status !== targetStatus) return false;

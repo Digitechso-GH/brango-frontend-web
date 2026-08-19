@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { DriverLocationSchema } from "@/features/pedidos/types/pedidos.schemas";
+import { authApi } from "@/features/auth/api/auth.api";
 
 export interface DriverLocation {
   driverId: string;
@@ -34,6 +35,17 @@ export const useDriverTrackingSocket = () => {
       }
     }
 
+    // Fallback para desarrollo si no hay token en localStorage
+    if (!token && process.env.NEXT_PUBLIC_DEV_MOCK_TOKEN) {
+      token = process.env.NEXT_PUBLIC_DEV_MOCK_TOKEN;
+    }
+
+    // Si aún no hay token, no intentar conectar para evitar bucles de reconexión fallidos
+    if (!token) {
+      console.warn("WebSocket Tracking: No token available, skipping connection.");
+      return;
+    }
+
     const socket: Socket = io(backendUrl, {
       transports: ["websocket"],
       auth: { token },
@@ -49,8 +61,34 @@ export const useDriverTrackingSocket = () => {
       console.log("WebSocket desconectado del Gateway:", reason);
     });
 
-    socket.on("connect_error", (err) => {
+    socket.on("connect_error", async (err) => {
       console.error("Error de conexión WebSocket:", err.message);
+      if (err.message?.toLowerCase().includes("jwt") || err.message?.toLowerCase().includes("unauthorized")) {
+        try {
+          const authStorage = localStorage.getItem("auth-storage");
+          if (authStorage) {
+            const parsed = JSON.parse(authStorage);
+            const refreshToken = parsed?.state?.refreshToken;
+            if (refreshToken) {
+              const res = await authApi.refresh(refreshToken);
+              parsed.state.token = res.token;
+              if (res.refreshToken) parsed.state.refreshToken = res.refreshToken;
+              localStorage.setItem("auth-storage", JSON.stringify(parsed));
+              socket.auth = { token: res.token };
+              socket.connect();
+            }
+          }
+        } catch (refreshErr) {
+          console.error("Error renovando token para WebSocket (sesión caducada):", refreshErr);
+          socket.disconnect();
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("auth-storage");
+            if (!window.location.pathname.includes("/login")) {
+              window.location.href = "/login";
+            }
+          }
+        }
+      }
     });
 
     socket.on("reconnect", (attempt) => {

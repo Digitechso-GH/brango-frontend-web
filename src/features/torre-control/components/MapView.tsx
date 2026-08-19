@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { GoogleMapView } from "@/shared/integrations/google/components/GoogleMapView";
 import { useDriverTrackingSocket } from "../hooks/useDriverTrackingSocket";
 import { useMapRoute } from "../hooks/useMapRoute";
-import { useDriversQuery, usePedidosQuery } from "@/features/pedidos/hooks/usePedidosQueries";
+import { useDriversQuery, usePedidosTodayQuery } from "@/features/pedidos/hooks/usePedidosQueries";
 import { ORDER_STATUS_DETAILS } from "@/shared/constants/order-status";
 
 interface MapViewProps {
@@ -47,7 +47,8 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
 
   const { locations } = useDriverTrackingSocket();
   const { data: drivers = [] } = useDriversQuery();
-  const { data: allTodayOrders = [] } = usePedidosQuery({ todayOnly: true });
+  const { data: ordersResponse } = usePedidosTodayQuery();
+  const allTodayOrders = ordersResponse?.data || [];
   const { drawMultiStopRoute, clearRoute } = useMapRoute(googleMap);
 
   const markersRef = useRef<any[]>([]);

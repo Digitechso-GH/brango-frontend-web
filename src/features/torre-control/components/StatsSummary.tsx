@@ -1,16 +1,16 @@
 "use client";
 
 import React from "react";
-import { usePedidosQuery } from "@/features/pedidos/hooks/usePedidosQueries";
+import { usePedidosTodayQuery } from "@/features/pedidos/hooks/usePedidosQueries";
 import { IconPackage, IconTruckDelivery, IconChecklist } from "@tabler/icons-react";
 import { ORDER_STATUS } from "@/shared/constants/order-status";
 
 export const StatsSummary = () => {
-  const { data: orders = [] } = usePedidosQuery();
-
-  const pendingCount = orders.filter((o: any) => o.estado === ORDER_STATUS.PENDING).length;
-  const inTransitCount = orders.filter((o: any) => o.estado === ORDER_STATUS.IN_TRANSIT).length;
-  const deliveredCount = orders.filter((o: any) => o.estado === ORDER_STATUS.DELIVERED).length;
+  const { data: ordersResponse } = usePedidosTodayQuery();
+  const allTodayOrders = ordersResponse?.data || [];
+  const pendingCount = allTodayOrders.filter((o: any) => o.estado === ORDER_STATUS.PENDING).length;
+  const inTransitCount = allTodayOrders.filter((o: any) => o.estado === ORDER_STATUS.IN_TRANSIT).length;
+  const deliveredCount = allTodayOrders.filter((o: any) => o.estado === ORDER_STATUS.DELIVERED).length;
 
   const stats = [
     {
