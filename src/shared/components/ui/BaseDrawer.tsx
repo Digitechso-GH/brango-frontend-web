@@ -28,26 +28,51 @@ export const BaseDrawer = ({
   zIndex = 9999
 }: BaseDrawerProps) => {
   const [mounted, setMounted] = useState(false);
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!isOpen || !mounted) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      // Forzamos al navegador a procesar el estado inicial antes de activar la animación
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsAnimating(true);
+        });
+      });
+    } else {
+      setIsAnimating(false);
+    }
+  }, [isOpen]);
+
+  const handleAnimationEnd = (e: React.TransitionEvent) => {
+    if (e.target === e.currentTarget && !isOpen) {
+      setShouldRender(false);
+    }
+  };
+
+  if (!shouldRender || !mounted) return null;
 
   return createPortal(
     <div 
-      className="fixed inset-0 overflow-hidden flex justify-end"
+      className={`fixed inset-0 overflow-hidden flex justify-end transition-opacity duration-400 ease-out ${isAnimating ? "opacity-100" : "opacity-0"}`}
       style={{ zIndex }}
+      onTransitionEnd={handleAnimationEnd}
     >
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-gray-900/50 transition-opacity duration-300"
+        className="absolute inset-0 bg-gray-900/50"
         onClick={onClose}
       />
 
-      {/* Panel: w-full por defecto (mobile), maxWidth en sm+ */}
-      <div className={`relative w-full ${maxWidth} bg-white dark:bg-[#1A1A24] shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300 border-l border-gray-100 dark:border-[#2D2D3D] transition-colors duration-300`}>
+      {/* Panel */}
+      <div 
+        className={`relative w-full ${maxWidth} bg-white dark:bg-[#1A1A24] shadow-2xl flex flex-col h-full sm:rounded-l-3xl border-l border-gray-100 dark:border-[#2D2D3D] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isAnimating ? "translate-x-0" : "translate-x-full"}`}
+      >
         
         {/* Floating Close Button if no title */}
         {!title && (
@@ -87,7 +112,7 @@ export const BaseDrawer = ({
         </div>
 
         {footer && (
-          <div className="shrink-0 border-t border-gray-100 dark:border-[#2D2D3D] bg-white dark:bg-[#1A1A24] transition-colors duration-300 p-5 sm:p-6">
+          <div className="shrink-0 border-t border-gray-100 dark:border-[#2D2D3D] bg-white dark:bg-[#1A1A24] transition-colors duration-300 p-5 sm:p-6 sm:rounded-bl-3xl">
             {footer}
           </div>
         )}

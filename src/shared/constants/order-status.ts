@@ -49,12 +49,12 @@ export const ORDER_STATUS_FILTER_OPTIONS = [
   { label: "Pendientes", value: "pendiente" },
   { label: "En Camino", value: "en_camino" },
   { label: "Entregados", value: "entregado" },
-  { label: "Fallidos", value: "fallido" },
+  { label: "Observados", value: "observado" },
 ];
 
 export const FRONTEND_TO_BACKEND_STATUS_MAP: Record<string, string> = {
   pendiente: ORDER_STATUS.PENDING,
   en_camino: ORDER_STATUS.IN_TRANSIT,
   entregado: ORDER_STATUS.DELIVERED,
-  fallido: ORDER_STATUS.FAILED,
+  observado: ORDER_STATUS.OBSERVED,
 };

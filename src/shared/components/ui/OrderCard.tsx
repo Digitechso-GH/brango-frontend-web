@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react";
 import { Badge } from "@/shared/components/ui/Badge";
-import { IconMapPin } from "@tabler/icons-react";
+import { GPSBrand } from "@/shared/components/ui/GPSBrand";
 import { ORDER_STATUS } from "@/shared/constants/order-status";
 import { getOrderStatusConfig } from "@/shared/utils/orderStatus.utils";
 
@@ -80,8 +80,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
       <div className="flex items-center justify-between gap-3 pt-0.5">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${statusConfig.iconBg}`}>
-            <IconMapPin size={16} />
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${statusConfig.iconBg}`}>
+            <GPSBrand size={18} />
           </div>
           <div className="flex flex-col min-w-0 flex-1">
             <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate leading-tight">

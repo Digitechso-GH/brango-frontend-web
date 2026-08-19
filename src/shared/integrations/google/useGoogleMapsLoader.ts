@@ -17,6 +17,7 @@ export const useGoogleMapsLoader = (): UseGoogleMapsLoaderResult => {
       loadGoogleMapsLibrary("maps"),
       loadGoogleMapsLibrary("marker"),
       loadGoogleMapsLibrary("routes"),
+      loadGoogleMapsLibrary("places"),
     ])
       .then(() => {
         if (isMounted) {

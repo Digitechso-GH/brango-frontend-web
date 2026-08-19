@@ -16,12 +16,12 @@ export function getOrderStatusConfig(estado?: string) {
 
   const iconBg =
     statusKey === ORDER_STATUS.IN_TRANSIT
-      ? "bg-amber-100 dark:bg-amber-900/30 text-amber-500 fill-amber-500"
+      ? "text-amber-500 fill-amber-500 bg-transparent"
       : statusKey === ORDER_STATUS.DELIVERED
-      ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 fill-emerald-500"
+      ? "text-emerald-500 fill-emerald-500 bg-transparent"
       : statusKey === ORDER_STATUS.OBSERVED || statusKey === ORDER_STATUS.FAILED
-      ? "bg-red-100 dark:bg-red-900/30 text-red-500 fill-red-500"
-      : "bg-slate-100 dark:bg-slate-800 text-slate-400 fill-slate-400";
+      ? "text-red-500 fill-red-500 bg-transparent"
+      : "text-gray-400 fill-gray-400 bg-transparent";
 
   const timelineLabel =
     statusKey === ORDER_STATUS.PENDING
