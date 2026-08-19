@@ -8,12 +8,15 @@ import { Badge } from "@/shared/components/ui/Badge";
 import { getOrderStatusConfig } from "@/shared/utils/orderStatus.utils";
 import { ORDER_STATUS } from "@/shared/constants/order-status";
 import { 
-  IconCheck, 
-  IconInfoCircle, 
-  IconMapPinFilled, 
+  IconX, 
   IconClock, 
-  IconMapPin 
+  IconInfoCircle,
+  IconChevronDown,
+  IconCheck
 } from "@tabler/icons-react";
+import { GPSBrand } from "@/shared/components/ui/GPSBrand";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface OrderDetailDrawerProps {
   isOpen: boolean;
@@ -23,6 +26,17 @@ interface OrderDetailDrawerProps {
 
 export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawerProps) => {
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+  const [selectedDriverId, setSelectedDriverId] = useState("");
+  
+  // Format today's date to YYYY-MM-DD in local time
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toLocaleDateString('en-CA'); // 'en-CA' always returns YYYY-MM-DD
+  });
+
+  const queryClient = useQueryClient();
 
   // Query para obtener detalles completos del pedido
   const { data: order, isLoading } = useQuery({
@@ -31,8 +45,40 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
     enabled: !!orderId && isOpen,
   });
 
+  const { data: drivers } = useQuery({
+    queryKey: ["drivers"],
+    queryFn: () => pedidosApi.getDrivers(),
+    enabled: isOpen,
+  });
+
+  const reassignMutation = useMutation({
+    mutationFn: (driverId: string) => {
+      if (!order?.routeAssignmentId) throw new Error("No hay asignación activa");
+      
+      // Force strict UTC midnight string to avoid ANY local timezone shifting
+      const payloadDate = `${selectedDate}T00:00:00.000Z`;
+      
+      return pedidosApi.reassignOrder(order.routeAssignmentId, {
+        driverId,
+        date: payloadDate,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Pedido reasignado exitosamente");
+      queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders-today"] });
+      setIsReassignModalOpen(false);
+      setSelectedDriverId("");
+    },
+    onError: (error: any) => {
+      toast.error("Error al reasignar: " + (error.response?.data?.message || error.message));
+    }
+  });
+
   React.useEffect(() => {
     setImgError(false);
+    setImgLoaded(false);
   }, [orderId]);
 
   const cleanMatrizText = (text?: string | null) => {
@@ -55,15 +101,15 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
       const unitStr = order.driver.unit ? ` · Unidad ${order.driver.unit}` : "";
       label = `En camino${unitStr}`;
     } else if (status === ORDER_STATUS.PENDING) {
-      label = "PENDIENTE DE ASIGNACIÓN";
+      label = order?.driver ? "Pendiente" : "PENDIENTE DE ASIGNACIÓN";
     }
 
     return (
       <Badge variant={statusConfig.variant} className="text-xs px-3 py-1.5 font-bold tracking-wide rounded-lg">
         {status === ORDER_STATUS.IN_TRANSIT ? (
-          <IconMapPinFilled size={14} />
+          <GPSBrand size={14} className="currentColor" />
         ) : status === ORDER_STATUS.DELIVERED ? (
-          <IconCheck size={14} />
+          <GPSBrand size={14} className="currentColor" />
         ) : status === ORDER_STATUS.OBSERVED || status === ORDER_STATUS.FAILED ? (
           <IconInfoCircle size={14} />
         ) : (
@@ -74,48 +120,92 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
     );
   };
 
-  const getTimelineEventLabel = (status: string) => {
-    if (status === ORDER_STATUS.PENDING) return "Pedido registrado";
-    const config = getOrderStatusConfig(status);
-    return config.timelineLabel;
-  };
+  const buildTimelineEvents = (order: any) => {
+    if (!order) return [];
+    const events: any[] = [];
 
-  const getTimelineEventIcon = (status: string) => {
-    if (status === ORDER_STATUS.IN_TRANSIT) {
-      return (
-        <div className="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 z-10 border-2 border-white dark:border-[#1A1A24]">
-          <IconMapPin size={15} />
-        </div>
-      );
+    events.push({
+      id: "created",
+      label: "Pedido registrado",
+      date: order.createdAt,
+      color: "gray",
+      subLabel: "carga masiva",
+      icon: <GPSBrand size={14} className="currentColor" />
+    });
+
+    if (!order.assignments || order.assignments.length === 0) {
+      return events;
     }
-    if (status === ORDER_STATUS.DELIVERED) {
-      return (
-        <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 z-10 border-2 border-white dark:border-[#1A1A24]">
-          <IconCheck size={15} />
-        </div>
-      );
-    }
-    if (status === ORDER_STATUS.OBSERVED || status === ORDER_STATUS.FAILED) {
-      return (
-        <div className="w-7 h-7 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 z-10 border-2 border-white dark:border-[#1A1A24]">
-          <IconInfoCircle size={15} />
-        </div>
-      );
-    }
-    return (
-      <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center shrink-0 z-10 border-2 border-white dark:border-[#1A1A24]">
-        <IconMapPin size={15} />
-      </div>
-    );
+
+    order.assignments.forEach((assignment: any, index: number) => {
+      const isLastAssignment = index === order.assignments.length - 1;
+      const dbEvents = assignment.events || [];
+      const sorted = [...dbEvents].sort((a: any, b: any) => {
+        const tA = new Date(a.timestamp).getTime();
+        const tB = new Date(b.timestamp).getTime();
+        if (tA === tB) {
+          if (a.type === 'REASSIGNED') return -1;
+          if (b.type === 'REASSIGNED') return 1;
+        }
+        return tA - tB;
+      });
+
+      let hasFinalForThisAssignment = false;
+
+      for (const ev of sorted) {
+        let label = ev.type;
+        let color = "gray";
+
+        if (ev.type === "REGISTERED") {
+          const unitStr = assignment.driver?.unit ? `Unidad ${assignment.driver.unit}` : (assignment.driver?.name || "Chofer");
+          label = `Asignado a ${unitStr}`;
+        } else if (ev.type === "TRANSIT_STARTED") {
+          label = "En camino";
+          color = "amber";
+        } else if (ev.type === "WHATSAPP_NOTIFICATION_SENT") {
+          label = "WhatsApp enviado al cliente";
+          color = "amber";
+        } else if (ev.type === "WHATSAPP_NOTIFICATION_FAILED") {
+          label = "Envío a WhatsApp fallido";
+          color = "amber";
+        } else if (ev.type === "DELIVERED") {
+          hasFinalForThisAssignment = true;
+          label = "Entrega";
+          color = "emerald";
+        } else if (ev.type === "OBSERVED") {
+          hasFinalForThisAssignment = true;
+          label = "Observado";
+          color = "red";
+        } else if (ev.type === "REASSIGNED") {
+          const dateStr = new Date(ev.timestamp).toLocaleDateString("es-PE", { day: 'numeric', month: 'long' });
+          const actorStr = ev.actor ? `POR ${ev.actor}` : "POR SISTEMA";
+          events.push({
+            id: ev.id,
+            isDivider: true,
+            label: `NUEVA REASIGNACIÓN — ${dateStr}`,
+            subLabel: actorStr
+          });
+          continue;
+        }
+
+        events.push({
+          id: ev.id,
+          label,
+          date: ev.timestamp,
+          color,
+          icon: <GPSBrand size={14} className="currentColor" />
+        });
+      }
+    });
+
+    return events;
   };
 
   const clientTitle = order ? getClientName(order) : "";
   const orderSubtitle = order && order.code ? `Pedido #${order.code}` : "";
 
-  const evidenceImage =
-    order?.fotoGuiaUrl ||
-    order?.guiaUrl ||
-    (order?.evidencias && order.evidencias.length > 0 ? order.evidencias[0].s3Url : null);
+  const latestAssignment = order?.assignments?.[order.assignments.length - 1];
+  const evidenceImage = latestAssignment?.evidences?.[0]?.s3Url || null;
 
   const showImage = !!evidenceImage && !imgError;
 
@@ -144,12 +234,18 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
           {/* 2. Imagen de Evidencia / ePOD */}
           <div className="w-full h-52 bg-slate-50 dark:bg-[#13131A] rounded-2xl border border-gray-200/80 dark:border-[#2D2D3D] flex flex-col items-center justify-center relative overflow-hidden p-3 shadow-sm">
             {showImage ? (
-              <img
-                src={evidenceImage}
-                onError={() => setImgError(true)}
-                alt="Evidencia / ePOD"
-                className="w-full h-full object-contain rounded-lg"
-              />
+              <>
+                {!imgLoaded && (
+                  <div className="absolute inset-0 m-3 bg-gray-200 dark:bg-[#2D2D3D] animate-pulse rounded-lg" />
+                )}
+                <img
+                  src={evidenceImage}
+                  onLoad={() => setImgLoaded(true)}
+                  onError={() => setImgError(true)}
+                  alt="Evidencia / ePOD"
+                  className={`w-full h-full object-cover rounded-lg transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+                />
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center gap-2.5 text-gray-400 dark:text-gray-500 p-4">
                 <svg className="w-10 h-10 stroke-current opacity-50" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -218,29 +314,126 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
             </h4>
 
             <div className="relative pl-1 flex flex-col gap-5">
-              <div className="absolute left-[14px] top-3 bottom-3 w-[2px] bg-gray-100 dark:bg-[#2D2D3D]"></div>
+              <div className="absolute left-[17px] top-3 bottom-3 w-[2px] bg-gray-100 dark:bg-[#2D2D3D]"></div>
 
-              {order.orderTimelines && order.orderTimelines.length > 0 ? (
-                order.orderTimelines.map((timeline: any) => (
-                  <div key={timeline.id} className="relative flex items-start gap-3">
-                    <div className="relative z-10 shrink-0">
-                      {getTimelineEventIcon(timeline.estadoNuevo)}
+              {buildTimelineEvents(order).map((timeline) => {
+                if (timeline.isDivider) {
+                  return (
+                    <div key={timeline.id} className="relative py-3 w-full z-10 bg-white dark:bg-[#1A1A24]">
+                      <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                        <div className="w-full border-t-2 border-dashed border-gray-200 dark:border-[#3D3D4D]"></div>
+                      </div>
+                      <div className="relative flex justify-center">
+                        <span className="bg-white dark:bg-[#1A1A24] px-3 text-[10px] font-black tracking-widest text-gray-400 dark:text-gray-500 uppercase">
+                          {timeline.label} {timeline.subLabel && <span className="font-medium opacity-60">({timeline.subLabel})</span>}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-col min-w-0 flex-1 pt-1">
-                      <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
-                        {getTimelineEventLabel(timeline.estadoNuevo)}
+                  );
+                }
+
+                return (
+                  <div key={timeline.id} className="relative flex items-start gap-3">
+                    <div className="relative z-10 shrink-0 mt-0.5">
+                      <div className={`w-7 h-7 rounded-full bg-white dark:bg-[#1A1A24] flex items-center justify-center shrink-0 z-10 ${
+                        timeline.color === 'emerald' ? 'text-emerald-500' : 
+                        timeline.color === 'amber' ? 'text-amber-500' : 
+                        timeline.color === 'red' ? 'text-red-500' : 
+                        'text-gray-400'
+                      }`}>
+                        {timeline.icon}
+                      </div>
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[13px] font-bold leading-tight text-gray-900 dark:text-white">
+                        {timeline.label}
                       </span>
-                      <span className="text-[11px] font-mono text-gray-400 dark:text-gray-500 mt-0.5">
-                        {new Date(timeline.createdAt).toLocaleString("es-PE", { dateStyle: "short", timeStyle: "short" })}
+                      <span className="text-[11px] font-mono text-gray-400 dark:text-gray-500 mt-0.5 flex gap-1">
+                        <span>{new Date(timeline.date).toLocaleTimeString("es-PE", { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                        {timeline.subLabel && <span>· {timeline.subLabel}</span>}
                       </span>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="text-xs text-gray-400 italic">Sin historial registrado.</div>
-              )}
+                );
+              })}
             </div>
           </div>
+
+          <div className="mt-8 flex items-center justify-end border-t border-gray-100 dark:border-[#2D2D3D] pt-4">
+            <button
+              type="button"
+              disabled={order.status !== ORDER_STATUS.OBSERVED}
+              className={`px-5 py-2.5 border rounded-xl text-[13px] font-bold transition-all ${
+                order.status === ORDER_STATUS.OBSERVED
+                  ? 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm'
+                  : 'border-gray-200 dark:border-gray-800 text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-[#1A1A24] cursor-not-allowed opacity-70'
+              }`}
+              onClick={() => {
+                setIsReassignModalOpen(true);
+              }}
+            >
+              Reasignar unidad
+            </button>
+          </div>
+
+          {/* Modal Overlay de Reasignación */}
+          {isReassignModalOpen && (
+            <div className="absolute inset-0 z-50 bg-white/80 dark:bg-[#13131A]/80 backdrop-blur-sm flex flex-col items-center justify-center p-6">
+              <div className="bg-white dark:bg-[#1A1A24] border border-gray-200 dark:border-[#2D2D3D] rounded-2xl shadow-xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-200">
+                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">Reasignar Pedido</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                  Elige a la nueva unidad que se encargará de realizar este recorrido desde cero.
+                </p>
+
+                <div className="relative mb-6">
+                  <select
+                    className="w-full appearance-none bg-gray-50 dark:bg-[#13131A] border border-gray-200 dark:border-[#2D2D3D] text-gray-900 dark:text-white text-sm font-bold rounded-xl px-4 py-3.5 pr-10 outline-none focus:border-blue-500 transition-colors"
+                    value={selectedDriverId}
+                    onChange={(e) => setSelectedDriverId(e.target.value)}
+                  >
+                    <option value="" disabled>Seleccionar un chofer...</option>
+                    {drivers?.map((driver: any) => (
+                      <option key={driver.id} value={driver.id}>
+                        {driver.name} {driver.unit ? `- Unidad ${driver.unit}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <IconChevronDown size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+
+                <div className="relative mb-6">
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">
+                    Fecha de reasignación
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full bg-gray-50 dark:bg-[#13131A] border border-gray-200 dark:border-[#2D2D3D] text-gray-900 dark:text-white text-sm font-bold rounded-xl px-4 py-3.5 outline-none focus:border-blue-500 transition-colors"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    disabled={reassignMutation.isPending}
+                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-[#2D2D3D] text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-50 dark:hover:bg-[#2D2D3D]/50 transition-colors"
+                    onClick={() => setIsReassignModalOpen(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!selectedDriverId || reassignMutation.isPending}
+                    className="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    onClick={() => reassignMutation.mutate(selectedDriverId)}
+                  >
+                    {reassignMutation.isPending ? "Procesando..." : "Confirmar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </BaseDrawer>

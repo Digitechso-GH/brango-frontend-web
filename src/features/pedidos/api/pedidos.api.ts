@@ -25,8 +25,14 @@ const normalizeOrder = (raw: any) => {
     z.array(RouteAssignmentSchema).parse(raw.assignments);
   }
 
-  // Asignación activa (más reciente por orderBy determinista en backend)
-  const activeAssignment = raw.assignments?.[0];
+  // Asignación activa: siempre ordenar explícitamente por createdAt desc para asegurar robustez
+  let activeAssignment = undefined;
+  if (raw.assignments && raw.assignments.length > 0) {
+    const sortedAssignments = [...raw.assignments].sort(
+      (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    activeAssignment = sortedAssignments[0];
+  }
   const driverObj = activeAssignment?.driver ? normalizeDriver(activeAssignment.driver) : null;
   const canonicalDriverId = activeAssignment?.driverId || null;
   const status = activeAssignment?.status || "PENDING";
@@ -51,10 +57,41 @@ const normalizeOrder = (raw: any) => {
 };
 
 export const pedidosApi = {
-  getOrders: async (params?: { driverId?: string; todayOnly?: boolean; date?: string }) => {
+  getOrders: async (params?: { search?: string; page?: number; limit?: number; driverId?: string }) => {
     const res = await api.get(API_ENDPOINTS.ORDERS, { params });
-    const rawData = res.data.data ?? res.data ?? [];
-    return Array.isArray(rawData) ? rawData.map(normalizeOrder) : [];
+    const payload = res.data.data ?? res.data;
+    
+    // Si viene del backend como { data, meta }
+    if (payload && Array.isArray(payload.data)) {
+      return {
+        data: payload.data.map(normalizeOrder),
+        meta: payload.meta,
+      };
+    }
+    
+    // Fallback de seguridad
+    const rawData = Array.isArray(payload) ? payload : [];
+    return {
+      data: rawData.map(normalizeOrder),
+      meta: { total: rawData.length, page: 1, limit: rawData.length, totalPages: 1 }
+    };
+  },
+
+  getOrdersToday: async (driverId?: string) => {
+    const params = driverId ? { driverId } : {};
+    const res = await api.get(`${API_ENDPOINTS.ORDERS}/today`, { params });
+    const payload = res.data.data ?? res.data;
+    if (payload && Array.isArray(payload.data)) {
+      return {
+        data: payload.data.map(normalizeOrder),
+        meta: payload.meta,
+      };
+    }
+    const rawData = Array.isArray(payload) ? payload : [];
+    return {
+      data: rawData.map(normalizeOrder),
+      meta: { total: rawData.length, page: 1, limit: rawData.length, totalPages: 1 }
+    };
   },
 
   getOrderDetail: async (id: string) => {

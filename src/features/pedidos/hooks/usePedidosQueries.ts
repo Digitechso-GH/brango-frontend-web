@@ -1,10 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { pedidosApi } from "../api/pedidos.api";
 
-export const usePedidosQuery = (params?: { driverId?: string; todayOnly?: boolean; date?: string }) => {
+export const usePedidosQuery = (params?: { search?: string; page?: number; limit?: number; driverId?: string }) => {
   return useQuery({
     queryKey: ["orders", params],
     queryFn: () => pedidosApi.getOrders(params),
+  });
+};
+
+export const usePedidosTodayQuery = (driverId?: string) => {
+  return useQuery({
+    queryKey: ["orders-today", driverId],
+    queryFn: () => pedidosApi.getOrdersToday(driverId),
   });
 };
 

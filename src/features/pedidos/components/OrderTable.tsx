@@ -1,12 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CleanTable } from "@/shared/components/ui/CleanTable";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
 import { Select } from "@/shared/components/ui/Select";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
-import { IconEye, IconPencil, IconMapPin } from "@tabler/icons-react";
+import { IconEye, IconPencil, IconMapPin, IconSearch, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => { setDebouncedValue(value); }, delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 import { usePedidosQuery, useDriversQuery } from "../hooks/usePedidosQueries";
 import { useAssignDriverMutation, useStartRouteMutation } from "../hooks/usePedidosMutations";
@@ -20,12 +29,31 @@ interface OrderTableProps {
 export const OrderTable = ({ onEdit }: OrderTableProps) => {
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [selectedDriver, setSelectedDriver] = useState("");
-  
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | undefined>();
 
+  // Estado de Búsqueda y Paginación
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+
+  // Reiniciar a página 1 cuando cambia la búsqueda
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
   // 1. Queries
-  const { data: orders = [], isLoading } = usePedidosQuery();
+  const { data: ordersResponse, isLoading } = usePedidosQuery({
+    search: debouncedSearch,
+    page,
+    limit,
+  });
+  
+  const orders = ordersResponse?.data || [];
+  const meta = ordersResponse?.meta || { total: 0, page: 1, limit: 20, totalPages: 1 };
+
   const { data: drivers = [] } = useDriversQuery();
 
   // 2. Mutaciones
@@ -37,16 +65,16 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
 
   const columns = [
     { header: "Nº Pedido", accessorKey: "code" },
-    { 
-      header: "Guía", 
-      accessorKey: "waybill", 
+    {
+      header: "Guía",
+      accessorKey: "waybill",
       cell: (info: any) => {
         const val = info.getValue();
         return val ? <span className="font-mono text-gray-500">#{val}</span> : <span className="text-gray-400">-</span>;
       }
     },
-    { 
-      header: "Cliente", 
+    {
+      header: "Cliente",
       accessorFn: (row: any) => {
         if (row.recipientCustomerType === "INDIVIDUAL") {
           return row.recipientName ?? "—";
@@ -67,19 +95,19 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
         );
       }
     },
-    { 
-      header: "Dirección de Entrega", 
+    {
+      header: "Dirección de Entrega",
       accessorFn: (row: any) => row.formattedAddress || row.rawAddress || "-",
       cell: (info: any) => {
         const row = info.row.original;
-        
+
         // Preferencia de visualización en UI (dirección formateada de geocoding o cruda)
         let displayAddress = row.formattedAddress;
         if (!displayAddress || displayAddress.startsWith("http")) {
           displayAddress = row.rawAddress;
         }
         if (!displayAddress || displayAddress.startsWith("http")) {
-          displayAddress = row.latitude && row.longitude 
+          displayAddress = row.latitude && row.longitude
             ? `Ubicación GPS (${Number(row.latitude).toFixed(3)}, ${Number(row.longitude).toFixed(3)})`
             : "Dirección de entrega";
         }
@@ -95,9 +123,9 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
         }
 
         return (
-          <div className="flex items-start gap-1.5 max-w-xs">
+          <div className="flex items-start gap-1.5 max-w-xs mx-auto">
             {mapsUrl && (
-              <a 
+              <a
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -115,8 +143,8 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
         );
       }
     },
-    { 
-      header: "Chofer", 
+    {
+      header: "Chofer",
       accessorFn: (row: any) => row.driver?.name || "No asignado",
       cell: (info: any) => {
         const val = info.row.original.driver?.name;
@@ -127,9 +155,9 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
         );
       }
     },
-    { 
-      header: "Estado", 
-      accessorKey: "status", 
+    {
+      header: "Estado",
+      accessorKey: "status",
       cell: (info: any) => {
         const val = info.getValue();
         const statusConfig = getOrderStatusConfig(val);
@@ -139,11 +167,11 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
             {statusConfig.label}
           </Badge>
         );
-      } 
+      }
     },
-    { 
-      header: "Acciones", 
-      accessorKey: "actions", 
+    {
+      header: "Acciones",
+      accessorKey: "actions",
       meta: { align: "center" },
       cell: (info: any) => {
         const order = info.row.original;
@@ -151,7 +179,7 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
 
         return (
           <div className="flex items-center justify-center gap-3">
-            <button 
+            <button
               title="Ver Detalles"
               className="text-gray-400 hover:text-accent transition-colors cursor-pointer"
               onClick={() => {
@@ -162,7 +190,7 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
               <IconEye size={18} stroke={2} />
             </button>
             {isEditable ? (
-              <button 
+              <button
                 title="Editar Pedido"
                 className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
                 onClick={() => onEdit && onEdit(order)}
@@ -170,7 +198,7 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
                 <IconPencil size={18} stroke={2} />
               </button>
             ) : (
-              <button 
+              <button
                 disabled
                 title="Solo se pueden editar pedidos en estado Pendiente"
                 className="text-gray-300 dark:text-gray-600 opacity-60 cursor-default select-none pointer-events-none"
@@ -180,7 +208,7 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
             )}
           </div>
         );
-      } 
+      }
     },
   ];
 
@@ -222,14 +250,14 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
           </div>
           <div className="flex items-center gap-3">
             <div className="w-64">
-              <Select 
+              <Select
                 options={driverOptions}
                 value={selectedDriver}
                 onChange={(val) => setSelectedDriver(val)}
               />
             </div>
-            <Button 
-              variant="primary" 
+            <Button
+              variant="primary"
               disabled={!selectedDriver || assignDriverMutation.isPending}
               onClick={handleAssignDriver}
             >
@@ -240,20 +268,82 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
       )}
 
       <div className="flex-1 bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm overflow-hidden flex flex-col">
-        <CleanTable 
-          columns={columns} 
-          data={orders} 
-          isLoading={isLoading} 
-          rowSelection={rowSelection}
-          onRowSelectionChange={setRowSelection}
-          enableRowSelection={(row) => row.original.status === ORDER_STATUS.PENDING}
-        />
+        {/* Header con Buscador */}
+        <div className="p-4 border-b border-gray-100 dark:border-[#2D2D3D] flex items-center justify-between">
+          <div className="relative w-full max-w-md">
+            <IconSearch size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por cliente, pedido, guía..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-[#181824] border border-gray-200 dark:border-[#2D2D3D] rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-900 dark:text-white placeholder-gray-400"
+            />
+          </div>
+          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            {meta.total} resultados
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <CleanTable
+            columns={columns}
+            data={orders}
+            isLoading={isLoading}
+            rowSelection={rowSelection}
+            onRowSelectionChange={setRowSelection}
+            enableRowSelection={(row) => row.original.status === ORDER_STATUS.PENDING}
+          />
+        </div>
+        
+        {/* Footer con Paginación */}
+        {/* Footer con Paginación - Comentado para futura facturación
+        <div className="p-4 border-t border-gray-100 dark:border-[#2D2D3D] flex items-center justify-between bg-gray-50/50 dark:bg-[#181824]/50">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Mostrar:</span>
+            <select
+              value={limit}
+              onChange={(e) => setLimit(Number(e.target.value))}
+              className="bg-white dark:bg-[#1D1D2B] border border-gray-200 dark:border-[#2D2D3D] rounded-lg text-sm font-medium px-2 py-1 focus:outline-none text-gray-700 dark:text-gray-300"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              Página {meta.page} de {meta.totalPages}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={meta.page <= 1}
+                className="px-2"
+              >
+                <IconChevronLeft size={18} />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
+                disabled={meta.page >= meta.totalPages}
+                className="px-2"
+              >
+                <IconChevronRight size={18} />
+              </Button>
+            </div>
+          </div>
+        </div>
+        */}
       </div>
 
-      <OrderDetailDrawer 
-        isOpen={drawerOpen} 
-        onClose={() => setDrawerOpen(false)} 
-        orderId={activeOrderId} 
+      <OrderDetailDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        orderId={activeOrderId}
       />
     </div>
   );

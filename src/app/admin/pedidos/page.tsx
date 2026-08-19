@@ -22,7 +22,7 @@ export default function PedidosPage() {
     if (!file) return;
 
     const toastId = toast.loading("Subiendo y procesando archivo Excel...");
-    
+
     pedidosApi.importOrdersExcel(file)
       .then((res) => {
         const count = res.totalImportados || (Array.isArray(res) ? res.length : 1);
@@ -72,15 +72,15 @@ export default function PedidosPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 h-full">
+    <div className="flex-1 flex flex-col gap-6 min-h-0">
       <div className="flex items-center justify-end">
         <div className="flex items-center gap-3">
-          <input 
-            type="file" 
-            ref={fileInputRef} 
+          <input
+            type="file"
+            ref={fileInputRef}
             onChange={handleFileUpload}
-            className="hidden" 
-            accept=".xlsx,.xls,.csv" 
+            className="hidden"
+            accept=".xlsx,.xls,.csv"
           />
           <Button variant="outline" onClick={() => fileInputRef.current?.click()} >
             <IconFileExport size={18} />
@@ -93,14 +93,14 @@ export default function PedidosPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 flex flex-col">
         <OrderTable onEdit={handleEdit} />
       </div>
 
-      <OrderDrawer 
-        isOpen={isDrawerOpen} 
-        onClose={handleClose} 
-        order={selectedOrder} 
+      <OrderDrawer
+        isOpen={isDrawerOpen}
+        onClose={handleClose}
+        order={selectedOrder}
       />
     </div>
   );

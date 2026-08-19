@@ -138,13 +138,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight truncate">{user?.name || "Administrador"}</p>
               <p className="text-[10px] font-medium text-gray-500 truncate">{userRoleLabel}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              title="Cerrar Sesión"
-              className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
-            >
-              <IconLogout size={18} />
-            </button>
           </div>
         </div>
       </aside>
@@ -166,8 +159,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-          {children}
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="p-8 pb-12 min-h-full flex flex-col">
+            {children}
+          </div>
         </div>
       </main>
     </div>

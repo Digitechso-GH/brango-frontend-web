@@ -5,7 +5,7 @@ import { ConfigForm } from "@/features/configuracion/components/ConfigForm";
 
 export default function ConfiguracionPage() {
   return (
-    <div className="flex flex-col gap-6 h-full">
+    <div className="flex flex-col gap-6">
       <ConfigForm />
     </div>
   );

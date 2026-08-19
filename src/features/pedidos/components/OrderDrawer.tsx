@@ -9,6 +9,7 @@ import { BaseDrawer } from "@/shared/components/ui/BaseDrawer";
 import { Input } from "@/shared/components/ui/Input";
 import { Button } from "@/shared/components/ui/Button";
 import { Select } from "@/shared/components/ui/Select";
+import { FORM_CONTROL_BASE } from "@/shared/components/ui/form-control";
 import { orderSchema, OrderFormData } from "../validaciones/pedidos.schema";
 import { useSavePedidoMutation } from "../hooks/usePedidosMutations";
 import { useSedesQuery, useDriversQuery } from "../hooks/usePedidosQueries";
@@ -19,6 +20,7 @@ import {
   IconBuildingWarehouse, 
   IconMapPin 
 } from "@tabler/icons-react";
+import { useGoogleMapsLoader } from "@/shared/integrations/google/useGoogleMapsLoader";
 
 interface OrderDrawerProps {
   isOpen: boolean;
@@ -32,6 +34,7 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
   const [predictions, setPredictions] = useState<any[]>([]);
   const autocompleteServiceRef = useRef<any>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
+  const { isLoaded } = useGoogleMapsLoader();
 
   const {
     register,
@@ -60,14 +63,8 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
     },
   });
 
-  // Inicializar Google Autocomplete Service
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.google && window.google.maps && window.google.maps.places) {
-      if (!autocompleteServiceRef.current) {
-        autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
-      }
-    }
-  }, []);
+  // Google Autocomplete Service (V1) deprecation: Eliminado el ref y el useEffect de inicialización.
+  // Ahora usaremos AutocompleteSuggestion de la nueva API directamente en handleAddressChange.
 
   const handleAddressChange = (val: string) => {
     setValue("rawAddress", val, { shouldValidate: true });
@@ -111,27 +108,27 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
     }
 
     // 3. Búsqueda de dirección estándar por autocompletado de Google Places
-    if (addressMode === "search" && val && val.length >= 3 && autocompleteServiceRef.current) {
-      autocompleteServiceRef.current.getPlacePredictions(
-        {
+    if (addressMode === "search" && val && val.length >= 3) {
+      if (typeof window !== "undefined" && window.google && window.google.maps && window.google.maps.places && window.google.maps.places.AutocompleteSuggestion) {
+        window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
           input: val,
-          componentRestrictions: { country: "pe" },
-        },
-        (results: any[], status: any) => {
-          if (status === "OK" && results) {
-            setPredictions(results);
-          } else {
+          includedRegionCodes: ["pe"],
+        })
+          .then(({ suggestions }: any) => {
+            setPredictions(suggestions || []);
+          })
+          .catch((err: any) => {
+            console.error("Error fetching places:", err);
             setPredictions([]);
-          }
-        }
-      );
+          });
+      }
     } else {
       setPredictions([]);
     }
   };
 
   const handleSelectPrediction = (prediction: any) => {
-    const selectedAddress = prediction.description;
+    const selectedAddress = prediction.placePrediction?.text?.text || prediction.description;
     setValue("rawAddress", selectedAddress, { shouldValidate: true });
     setValue("formattedAddress", selectedAddress);
     setPredictions([]);
@@ -382,22 +379,22 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
                 }
                 value={watch("rawAddress") || ""}
                 onChange={(e) => handleAddressChange(e.target.value)}
-                className="w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-[#181824] border border-gray-200 dark:border-[#2D2D3D] rounded-xl text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                className={`${FORM_CONTROL_BASE} pl-10 pr-3.5 text-sm`}
               />
 
               {predictions.length > 0 && addressMode === "search" && (
                 <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#1D1D2B] border border-gray-200 dark:border-[#2D2D3D] rounded-xl shadow-xl z-[9999] max-h-56 overflow-y-auto p-1 animate-in fade-in slide-in-from-top-1">
                   {predictions.map((item, idx) => (
                     <div
-                      key={item.place_id || idx}
+                      key={item.placePrediction?.placeId || item.place_id || idx}
                       onClick={() => handleSelectPrediction(item)}
                       className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg cursor-pointer transition-colors border-b border-gray-50 dark:border-white/5 last:border-none"
                     >
                       <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
-                        {item.structured_formatting?.main_text || item.description}
+                        {item.placePrediction?.text?.text || item.structured_formatting?.main_text || item.description}
                       </p>
                       <p className="text-[10px] text-gray-500 truncate mt-0.5">
-                        {item.structured_formatting?.secondary_text || item.description}
+                        {item.placePrediction?.text?.text ? "Perú" : (item.structured_formatting?.secondary_text || item.description)}
                       </p>
                     </div>
                   ))}
