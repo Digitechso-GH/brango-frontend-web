@@ -302,7 +302,7 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
               <div className="flex justify-between items-start py-3">
                 <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0">Motivo de observación</span>
                 <span className="text-xs font-bold text-red-500 text-right ml-4 max-w-[220px] leading-snug">
-                  {order.reasonText}
+                  {order.reasonText === 'AUTO_CLOSED_EOD' ? 'Cierre automático fin de jornada (Sin finalizar)' : order.reasonText}
                 </span>
               </div>
             )}
