@@ -55,9 +55,10 @@ export const ConfigForm = () => {
 
     setUploading(true);
     try {
-      // 1. Pedir URL firmada al backend
+      // 1. Pedir URL firmada al backend (usamos clave estática para que R2 la sobreescriba y no se acumule)
+      const extension = file.name.split('.').pop();
       const res = await api.post(`${API_ENDPOINTS.ORDERS}/presigned-url`, {
-        key: `whatsapp-logo-${Date.now()}-${file.name}`,
+        key: `company-logo-current.${extension}`,
         contentType: file.type,
       });
       const { uploadUrl, publicUrl } = res.data.data;
@@ -69,8 +70,9 @@ export const ConfigForm = () => {
         },
       });
 
-      // 3. Guardar la URL pública
-      setWhatsappImage(publicUrl);
+      // 3. Guardar la URL pública con un parámetro de versión para romper la caché del navegador
+      const publicUrlWithBuster = `${publicUrl}?v=${Date.now()}`;
+      setWhatsappImage(publicUrlWithBuster);
     } catch (error: any) {
       console.error("Error subiendo la imagen", error);
       toast.error(`Error subiendo la imagen: ${error.message || "Revisa la consola"}`);

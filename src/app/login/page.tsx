@@ -11,8 +11,8 @@ import { IconMail, IconLock, IconArrowRight, IconLoader2 } from "@tabler/icons-r
 export default function LoginPage() {
   const router = useRouter();
   const { token, setAuth, hasHydrated } = useAuthStore();
-  const [email, setEmail] = useState("admin@brango.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   // Redirigir si ya tiene sesión activa (solo después de hidratar)
@@ -83,7 +83,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@brango.com"
+                placeholder="example@gmail.com"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/10 transition-all font-medium"
               />
             </div>
