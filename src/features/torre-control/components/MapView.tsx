@@ -199,6 +199,8 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
 
       // SI EXISTEN COORDENADAS: Dibujar paradas y polilínea
       if (originCoords) {
+        const routeWaypoints: Array<{ lat: number; lng: number }> = [originCoords];
+        
         if (driverId) {
           const existingTruck = markersRef.current.find((m) => {
             const pos = m.position;
@@ -232,8 +234,6 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
           });
 
           const sortedPendingOrders = activeDriverOrders.sort((a: any, b: any) => (a.sequenceIndex || 0) - (b.sequenceIndex || 0));
-
-          const routeWaypoints: Array<{ lat: number; lng: number }> = [originCoords];
 
           const points = [
             originCoords,
@@ -269,7 +269,6 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
             markersRef.current.push(destMarker);
           });
         } else {
-          const routeWaypoints: Array<{ lat: number; lng: number }> = [originCoords];
           routeWaypoints.push(destPos);
 
           const statusDetail = ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;
