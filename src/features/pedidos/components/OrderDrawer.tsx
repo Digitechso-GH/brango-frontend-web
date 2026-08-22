@@ -212,12 +212,19 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
     const name = (formData.recipientName || "").trim();
     const isRuc = formData.recipientDocumentType === "RUC" || doc.length === 11;
 
-    const payload: OrderFormData = {
+    const payload: any = {
       ...formData,
       recipientCustomerType: isRuc ? "COMPANY" : "INDIVIDUAL",
       recipientDocument: doc,
       recipientName: name,
     };
+
+    if (formData.driverId === "") {
+      payload.removeDriver = true;
+      delete payload.driverId;
+    } else if (formData.driverId) {
+      payload.driverId = formData.driverId;
+    }
 
     saveMutation.mutate(payload);
   };
@@ -266,7 +273,7 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
               {...register("code")}
             />
             <Input
-              label="Guía de remisión *"
+              label="Guía de remisión (Opcional)"
               placeholder="Ej. 004521"
               icon={<IconFileText size={16} />}
               error={errors.waybill?.message?.toString()}

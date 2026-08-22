@@ -16,6 +16,7 @@ interface SelectProps {
   icon?: React.ReactNode;
   onClick?: () => void;
   placement?: "auto" | "top" | "bottom";
+  disabled?: boolean;
 }
 
 export const Select = ({
@@ -27,6 +28,7 @@ export const Select = ({
   icon,
   onClick,
   placement = "auto",
+  disabled = false,
 }: SelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openUpward, setOpenUpward] = useState(false);
@@ -44,6 +46,7 @@ export const Select = ({
   }, []);
 
   const handleToggle = () => {
+    if (disabled) return;
     if (!isOpen && buttonRef.current) {
       if (placement === "top") {
         setOpenUpward(true);
@@ -66,9 +69,10 @@ export const Select = ({
       <button
         ref={buttonRef}
         type="button"
+        disabled={disabled}
         onClick={handleToggle}
         className={`cursor-pointer ${FORM_CONTROL_BASE} flex items-center justify-between ${icon ? "pl-10 text-left" : "px-3.5 text-left"
-          } hover:border-gray-300 dark:hover:border-gray-600 ${error ? "!border-red-500 !focus:ring-red-500/20 !focus:border-red-500" : ""
+          } ${disabled ? "opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800" : "hover:border-gray-300 dark:hover:border-gray-600"} ${error ? "!border-red-500 !focus:ring-red-500/20 !focus:border-red-500" : ""
           }`}
       >
         {icon && (
@@ -110,7 +114,7 @@ export const Select = ({
         </div>
       )}
       {error && (
-        <p className="text-[10px] font-bold text-red-500 uppercase ml-1 tracking-wider mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+        <p className="text-[11px] font-medium text-red-500 ml-1 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
           {error}
         </p>
       )}

@@ -12,7 +12,8 @@ import {
   IconClock, 
   IconInfoCircle,
   IconChevronDown,
-  IconCheck
+  IconCheck,
+  IconTrash
 } from "@tabler/icons-react";
 import { GPSBrand } from "@/shared/components/ui/GPSBrand";
 import { Select } from "@/shared/components/ui/Select";
@@ -74,6 +75,20 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
     },
     onError: (error: any) => {
       toast.error("Error al reasignar: " + (error.response?.data?.message || error.message));
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => pedidosApi.deleteOrder(id),
+    onSuccess: () => {
+      toast.success("Pedido eliminado exitosamente");
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders-today"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast.error("Error al eliminar: " + (error.response?.data?.message || error.message));
     }
   });
 
@@ -360,7 +375,26 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
             </div>
           </div>
 
-          <div className="mt-8 flex items-center justify-end border-t border-gray-100 dark:border-[#2D2D3D] pt-4">
+          <div className="mt-8 flex items-center justify-between border-t border-gray-100 dark:border-[#2D2D3D] pt-4">
+            {/* Botón Eliminar: Solo si está PENDING y NO tiene chofer asignado */}
+            {order.status === ORDER_STATUS.PENDING && !order.driverId ? (
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-bold text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-all disabled:opacity-50"
+                onClick={() => {
+                  if (window.confirm("¿Estás seguro de que deseas eliminar este pedido permanentemente? Esta acción no se puede deshacer.")) {
+                    deleteMutation.mutate(order.id);
+                  }
+                }}
+              >
+                <IconTrash size={16} stroke={2.5} />
+                {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+              </button>
+            ) : (
+              <div /> /* Espaciador para mantener el justify-between */
+            )}
+
             <button
               type="button"
               disabled={order.status !== ORDER_STATUS.OBSERVED}

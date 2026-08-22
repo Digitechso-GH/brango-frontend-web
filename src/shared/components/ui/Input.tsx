@@ -33,7 +33,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           />
         </div>
         {error && (
-          <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider ml-1 mt-0.5 animate-in fade-in slide-in-from-top-1">
+          <span className="text-[11px] font-medium text-red-500 ml-1 mt-0.5 animate-in fade-in slide-in-from-top-1">
             {error}
           </span>
         )}

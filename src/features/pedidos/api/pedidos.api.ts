@@ -33,9 +33,10 @@ const normalizeOrder = (raw: any) => {
     );
     activeAssignment = sortedAssignments[0];
   }
-  const driverObj = activeAssignment?.driver ? normalizeDriver(activeAssignment.driver) : null;
-  const canonicalDriverId = activeAssignment?.driverId || null;
   const status = activeAssignment?.status || "PENDING";
+  const isCancelled = status === "CANCELLED";
+  const driverObj = (activeAssignment?.driver && !isCancelled) ? normalizeDriver(activeAssignment.driver) : null;
+  const canonicalDriverId = isCancelled ? null : (activeAssignment?.driverId || null);
   const sequenceIndex = activeAssignment?.sequenceIndex ?? 0;
   
   // Regla estricta: reasonText solo si la asignación activa está OBSERVED
@@ -153,6 +154,11 @@ export const pedidosApi = {
     payload: { driverId: string; vehicleId?: string; date: string }
   ) => {
     const res = await api.post(`${API_ENDPOINTS.ORDERS}/${routeAssignmentId}/reassign`, payload);
+    return res.data.data ?? res.data;
+  },
+
+  deleteOrder: async (id: string) => {
+    const res = await api.delete(`${API_ENDPOINTS.ORDERS}/${id}`);
     return res.data.data ?? res.data;
   },
 };

@@ -2,7 +2,7 @@ import * as z from "zod";
 
 export const orderSchema = z.object({
   code: z.string().min(1, "El número de pedido es obligatorio"),
-  waybill: z.string().min(1, "La guía de remisión es obligatoria"),
+  waybill: z.string().optional(),
   originBranchId: z.string().optional(),
   recipientCustomerType: z.enum(["COMPANY", "INDIVIDUAL"]).optional(),
   recipientDocumentType: z.string().optional(),

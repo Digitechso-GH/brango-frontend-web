@@ -6,7 +6,10 @@ import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
 import { Select } from "@/shared/components/ui/Select";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
-import { IconEye, IconPencil, IconMapPin, IconSearch, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { IconEye, IconPencil, IconMapPin, IconSearch, IconChevronLeft, IconChevronRight, IconTrash } from "@tabler/icons-react";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { pedidosApi } from "../api/pedidos.api";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -57,11 +60,26 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
   const { data: drivers = [] } = useDriversQuery();
 
   // 2. Mutaciones
+  const queryClient = useQueryClient();
   const assignDriverMutation = useAssignDriverMutation(() => {
     setRowSelection({});
     setSelectedDriver("");
   });
   const startRouteMutation = useStartRouteMutation();
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => pedidosApi.deleteOrder(id),
+    onSuccess: () => {
+      toast.success("Pedido eliminado exitosamente");
+      queryClient.invalidateQueries({ queryKey: ["pedidos"] });
+    },
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message ||
+        "No se pudo eliminar el pedido. Verifique que siga pendiente y sin chofer."
+      );
+    },
+  });
 
   const columns = [
     { header: "Nº Pedido", accessorKey: "code" },
@@ -176,6 +194,7 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
       cell: (info: any) => {
         const order = info.row.original;
         const isEditable = order.status === ORDER_STATUS.PENDING;
+        const isDeletable = order.status === ORDER_STATUS.PENDING && !order.driverId;
 
         return (
           <div className="flex items-center justify-center gap-3">
@@ -204,6 +223,29 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
                 className="text-gray-300 dark:text-gray-600 opacity-60 cursor-default select-none pointer-events-none"
               >
                 <IconPencil size={18} stroke={1.6} />
+              </button>
+            )}
+
+            {isDeletable ? (
+              <button
+                title="Eliminar Pedido"
+                className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                onClick={() => {
+                  if (window.confirm("¿Estás seguro de eliminar este pedido? Esta acción no se puede deshacer.")) {
+                    deleteMutation.mutate(order.id);
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+              >
+                <IconTrash size={18} stroke={2} />
+              </button>
+            ) : (
+              <button
+                disabled
+                title="Solo se pueden eliminar pedidos en estado Pendiente y sin asignar"
+                className="text-gray-300 dark:text-gray-600 opacity-60 cursor-default select-none pointer-events-none"
+              >
+                <IconTrash size={18} stroke={1.6} />
               </button>
             )}
           </div>

@@ -29,7 +29,7 @@ export const RouteAssignmentSchema = z.object({
   vehicleId: z.string().nullable().optional(),
   date: z.string().or(z.date()),
   sequenceIndex: z.number(),
-  status: z.enum(["PENDING", "IN_TRANSIT", "DELIVERED", "OBSERVED"]),
+  status: z.enum(["PENDING", "IN_TRANSIT", "DELIVERED", "OBSERVED", "CANCELLED"]),
   reasonText: z.string().nullable().optional(),
   previousAssignmentId: z.string().nullable().optional(),
   originLatitude: z.number().nullable().optional(),

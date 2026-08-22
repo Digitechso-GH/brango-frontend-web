@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { GoogleMapView } from "@/shared/integrations/google/components/GoogleMapView";
 import { useDriverTrackingSocket } from "../hooks/useDriverTrackingSocket";
 import { useMapRoute } from "../hooks/useMapRoute";
-import { useDriversQuery, usePedidosTodayQuery } from "@/features/pedidos/hooks/usePedidosQueries";
+import { useDriversQuery, usePedidosTodayQuery, useSedesQuery } from "@/features/pedidos/hooks/usePedidosQueries";
 import { ORDER_STATUS_DETAILS } from "@/shared/constants/order-status";
 
 interface MapViewProps {
@@ -48,7 +48,9 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
   const { locations } = useDriverTrackingSocket();
   const { data: drivers = [] } = useDriversQuery();
   const { data: ordersResponse } = usePedidosTodayQuery();
+  const { data: sedesResponse } = useSedesQuery();
   const allTodayOrders = ordersResponse?.data || [];
+  const sedes = sedesResponse?.data || [];
   const { drawMultiStopRoute, clearRoute } = useMapRoute(googleMap);
 
   const markersRef = useRef<any[]>([]);
@@ -61,38 +63,12 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const fitMapToBoundsForOrder = (order: any, map: google.maps.Map) => {
-    const orderLat = order?.latitude !== null && order?.latitude !== undefined ? Number(order.latitude) : null;
-    const orderLng = order?.longitude !== null && order?.longitude !== undefined ? Number(order.longitude) : null;
 
-    if (!order || orderLat === null || orderLng === null || !map) return;
-
-    const destPos = { lat: orderLat, lng: orderLng };
-    const driverId = order.driverId;
-    const assignedDriver = driverId ? drivers.find((d: any) => d.id === driverId) : null;
-    const livePos = driverId ? locations[driverId] : null;
-
-    const originLat = livePos?.latitude ?? order.originLatitude ?? assignedDriver?.latitude;
-    const originLng = livePos?.longitude ?? order.originLongitude ?? assignedDriver?.longitude;
-
-    if (originLat !== null && originLat !== undefined && originLng !== null && originLng !== undefined) {
-      const bounds = new google.maps.LatLngBounds();
-      bounds.extend(destPos);
-      bounds.extend({ lat: Number(originLat), lng: Number(originLng) });
-      map.fitBounds(bounds, { top: 80, right: 80, bottom: 80, left: 80 });
-    } else {
-      map.panTo(destPos);
-      map.setZoom(16);
-    }
-  };
 
   // Sincronizar pedido enfocado desde la lista lateral
   useEffect(() => {
     if (focusedOrder) {
       setSelectedOrder(focusedOrder);
-      if (googleMap) {
-        fitMapToBoundsForOrder(focusedOrder, googleMap);
-      }
     }
   }, [focusedOrder, googleMap]);
 
@@ -207,57 +183,66 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
       const assignedDriver = driverId ? drivers.find((d: any) => d.id === driverId) : null;
       const liveDriverPos = driverId ? activeDriverPositions[driverId] : null;
 
-      // Resolver coordenadas de origen del chofer
+      const warehouse = sedes.find((s: any) => s.id === order.originBranchId) || sedes[0];
+      const warehouseCoords = warehouse?.latitude && warehouse?.longitude
+        ? { lat: Number(warehouse.latitude), lng: Number(warehouse.longitude) }
+        : null;
+
+      // Resolver coordenadas de origen del chofer o sucursal
       const originCoords = liveDriverPos
         ? { lat: liveDriverPos.lat, lng: liveDriverPos.lng }
         : (order.originLatitude && order.originLongitude)
           ? { lat: Number(order.originLatitude), lng: Number(order.originLongitude) }
           : (assignedDriver && assignedDriver.latitude && assignedDriver.longitude)
             ? { lat: Number(assignedDriver.latitude), lng: Number(assignedDriver.longitude) }
-            : null;
+            : warehouseCoords;
 
-      // SI EXISTEN COORDENADAS DEL CHOFER: Dibujar paradas pendientes/en tránsito y polilínea multiparada
+      // SI EXISTEN COORDENADAS: Dibujar paradas y polilínea
       if (originCoords) {
-        const existingTruck = markersRef.current.find((m) => {
-          const pos = m.position;
-          return pos && Math.abs(pos.lat - originCoords.lat) < 0.0001 && Math.abs(pos.lng - originCoords.lng) < 0.0001;
-        });
-
-        if (!existingTruck) {
-          const driverName = assignedDriver?.name ?? liveDriverPos?.name ?? "Sin nombre";
-          const statusColor = liveDriverPos?.statusColor || "#EF4444";
-          const truckMarker = createAdvancedMarker({
-            position: originCoords,
-            map: googleMap,
-            title: `🚚 ${driverName}`,
-            htmlContent: TRUCK_MARKER_HTML(statusColor),
+        if (driverId) {
+          const existingTruck = markersRef.current.find((m) => {
+            const pos = m.position;
+            return pos && Math.abs(pos.lat - originCoords.lat) < 0.0001 && Math.abs(pos.lng - originCoords.lng) < 0.0001;
           });
-          markersRef.current.push(truckMarker);
-        }
 
-        // Obtener únicamente los pedidos pendientes o en tránsito del chofer para el día
-        const activeDriverOrders = allTodayOrders.filter((o: any) => {
-          const rawSt = String(o.status || "PENDING").toUpperCase();
-          const isFinished = rawSt === "DELIVERED" || rawSt === "FAILED" || rawSt === "OBSERVED";
-          return (
-            o.driverId === driverId &&
-            !isFinished &&
-            o.latitude !== null &&
-            o.latitude !== undefined &&
-            o.longitude !== null &&
-            o.longitude !== undefined
-          );
-        });
+          if (!existingTruck) {
+            const driverName = assignedDriver?.name ?? liveDriverPos?.name ?? "Sin nombre";
+            const statusColor = liveDriverPos?.statusColor || "#EF4444";
+            const truckMarker = createAdvancedMarker({
+              position: originCoords,
+              map: googleMap,
+              title: `🚚 ${driverName}`,
+              htmlContent: TRUCK_MARKER_HTML(statusColor),
+            });
+            markersRef.current.push(truckMarker);
+          }
 
-        // Ordenar estrictamente por sequenceIndex
-        activeDriverOrders.sort(
-          (a: any, b: any) => (a.sequenceIndex ?? 0) - (b.sequenceIndex ?? 0)
-        );
+          // Obtener únicamente los pedidos pendientes o en tránsito del chofer para el día
+          const activeDriverOrders = allTodayOrders.filter((o: any) => {
+            const rawSt = String(o.status || "PENDING").toUpperCase();
+            const isFinished = rawSt === "DELIVERED" || rawSt === "FAILED" || rawSt === "OBSERVED";
+            return (
+              o.driverId === driverId &&
+              !isFinished &&
+              o.latitude !== null &&
+              o.latitude !== undefined &&
+              o.longitude !== null &&
+              o.longitude !== undefined
+            );
+          });
 
-        const routeWaypoints: Array<{ lat: number; lng: number }> = [originCoords];
+          const sortedPendingOrders = activeDriverOrders.sort((a: any, b: any) => (a.sequenceIndex || 0) - (b.sequenceIndex || 0));
 
-        if (activeDriverOrders.length > 0) {
-          activeDriverOrders.forEach((actOrd: any, idx: number) => {
+          const routeWaypoints: Array<{ lat: number; lng: number }> = [originCoords];
+
+          const points = [
+            originCoords,
+            ...sortedPendingOrders.map((o: any) => ({ lat: Number(o.latitude), lng: Number(o.longitude) })),
+          ];
+          drawMultiStopRoute(points);
+
+          // Renderizar los marcadores de destino
+          sortedPendingOrders.forEach((actOrd: any, idx: number) => {
             const pt = { lat: Number(actOrd.latitude), lng: Number(actOrd.longitude) };
             routeWaypoints.push(pt);
 
@@ -284,6 +269,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
             markersRef.current.push(destMarker);
           });
         } else {
+          const routeWaypoints: Array<{ lat: number; lng: number }> = [originCoords];
           routeWaypoints.push(destPos);
 
           const statusDetail = ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;

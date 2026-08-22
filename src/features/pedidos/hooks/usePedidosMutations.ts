@@ -30,6 +30,7 @@ export const useSavePedidoMutation = (orderId?: string, onClose?: () => void, se
         latitude: data.latitude && String(data.latitude).trim() !== "" ? Number(data.latitude) : undefined,
         longitude: data.longitude && String(data.longitude).trim() !== "" ? Number(data.longitude) : undefined,
         driverId: data.driverId || undefined,
+        removeDriver: (data as any).removeDriver || undefined,
         warehouseContact: data.warehouseContact || "",
       };
 
