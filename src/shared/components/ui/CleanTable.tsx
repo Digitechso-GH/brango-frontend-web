@@ -92,12 +92,12 @@ export function CleanTable<TData, TValue>({
   return (
     <div className="w-full flex flex-col gap-4">
       {/* --- DESKTOP VIEW --- */}
-      <div className={`w-full bg-white dark:bg-[#1A1A24] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm overflow-hidden flex-col ${mobileConfig ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full bg-white dark:bg-[#1A1A24] rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm overflow-hidden flex-col ${mobileConfig ? 'hidden md:flex' : 'flex'}`}>
         <div className="w-full overflow-x-auto custom-scrollbar flex-1">
           <table className="w-full border-collapse text-left">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="border-b border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-50/60 dark:bg-slate-900/30">
+                <tr key={headerGroup.id} className="border-b border-slate-100 dark:border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/30">
                   {headerGroup.headers.map((header) => {
                     const meta = header.column.columnDef.meta as any;
                     const alignClass = meta?.align === 'left' ? 'text-left' : meta?.align === 'right' ? 'text-right' : 'text-center';
@@ -105,7 +105,7 @@ export function CleanTable<TData, TValue>({
                     return (
                       <th
                         key={header.id}
-                        className={`py-3 px-4 whitespace-nowrap ${alignClass} ${customClass}`}
+                        className={`py-4 px-6 whitespace-nowrap ${alignClass} ${customClass}`}
                       >
                         {header.isPlaceholder
                           ? null
@@ -124,7 +124,7 @@ export function CleanTable<TData, TValue>({
                 Array.from({ length: 5 }).map((_, idx) => (
                   <tr key={`skeleton-${idx}`} className="animate-pulse">
                     {table.getVisibleFlatColumns().map((col, cIdx) => (
-                      <td key={cIdx} className="py-3 px-4">
+                      <td key={cIdx} className="py-4 px-6">
                         <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-lg w-full max-w-[120px] mx-auto"></div>
                       </td>
                     ))}
@@ -140,7 +140,7 @@ export function CleanTable<TData, TValue>({
                       return (
                         <td
                           key={cell.id}
-                          className={`py-3 px-4 text-slate-800 dark:text-slate-200 ${alignClass} ${customClass}`}
+                          className={`py-4 px-6 text-slate-800 dark:text-slate-200 ${alignClass} ${customClass}`}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>

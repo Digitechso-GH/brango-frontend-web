@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { 
+  IconBox,
   IconShoppingBag, 
   IconClock, 
   IconAlertTriangle, 
@@ -98,81 +99,42 @@ export default function PedidosPage() {
       />
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Pedidos
-        </h1>
-        <p className="text-xs font-normal text-slate-400 dark:text-slate-500 mt-1">
-          Todo lo que se mueve hoy, en un solo lugar
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+              <IconBox size={22} />
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+              Pedidos
+            </h1>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Todo lo que se mueve hoy, en un solo lugar.
+          </p>
+        </div>
       </div>
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {/* Card 1: Pedidos totales */}
-        <div className="bg-white dark:bg-[#1A1A24] rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-3">
-            <IconShoppingBag size={20} />
-          </div>
-          <div>
-            <span className="text-2xl font-bold text-slate-900 dark:text-white leading-none">
-              {totalOrders}
-            </span>
-            <p className="text-xs font-normal text-slate-400 dark:text-slate-500 mt-1.5">
-              Pedidos totales
-            </p>
-          </div>
+        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Pedidos</span>
+          <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{totalOrders}</p>
         </div>
 
-        {/* Card 2: En ruta ahora */}
-        <div className="bg-white dark:bg-[#1A1A24] rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <IconClock size={20} />
-            </div>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              EN VIVO
-            </span>
-          </div>
-          <div>
-            <span className="text-2xl font-bold text-slate-900 dark:text-white leading-none">
-              {inTransitOrders}
-            </span>
-            <p className="text-xs font-normal text-slate-400 dark:text-slate-500 mt-1.5">
-              En ruta ahora
-            </p>
-          </div>
+        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm">
+          <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">En Ruta Ahora</span>
+          <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{inTransitOrders}</p>
         </div>
 
-        {/* Card 3: Observados */}
-        <div className="bg-white dark:bg-[#1A1A24] rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
-          <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-500 dark:text-rose-400 flex items-center justify-center mb-3">
-            <IconAlertTriangle size={20} />
-          </div>
-          <div>
-            <span className="text-2xl font-bold text-slate-900 dark:text-white leading-none">
-              {observedOrders}
-            </span>
-            <p className="text-xs font-normal text-slate-400 dark:text-slate-500 mt-1.5">
-              Observados
-            </p>
-          </div>
+        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Observados</span>
+          <p className="text-2xl font-black text-slate-700 dark:text-slate-300 mt-1">{observedOrders}</p>
         </div>
 
-        {/* Card 4: Entregados hoy */}
-        <div className="bg-white dark:bg-[#1A1A24] rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
-            <IconCheck size={20} />
-          </div>
-          <div>
-            <span className="text-2xl font-bold text-slate-900 dark:text-white leading-none">
-              {deliveredOrders}
-            </span>
-            <p className="text-xs font-normal text-slate-400 dark:text-slate-500 mt-1.5">
-              Entregados hoy
-            </p>
-          </div>
+        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm">
+          <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Entregados Hoy</span>
+          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{deliveredOrders}</p>
         </div>
       </div>
 

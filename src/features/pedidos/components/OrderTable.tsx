@@ -80,7 +80,7 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
 
   const columns = [
     { 
-      header: "PEDIDO", 
+      header: "Pedido", 
       accessorKey: "code",
       cell: (info: any) => {
         const row = info.row.original;
@@ -97,7 +97,7 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
       }
     },
     {
-      header: "CLIENTE",
+      header: "Cliente",
       accessorFn: (row: any) => {
         if (row.recipientCustomerType === "INDIVIDUAL") {
           return row.recipientName ?? "—";
@@ -119,7 +119,7 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
       }
     },
     {
-      header: "DIRECCIÓN DE ENTREGA",
+      header: "Dirección de Entrega",
       accessorFn: (row: any) => row.formattedAddress || row.rawAddress || "-",
       meta: { align: "center" },
       cell: (info: any) => {
@@ -143,7 +143,7 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
       }
     },
     {
-      header: "CHOFER",
+      header: "Chofer",
       accessorFn: (row: any) => row.driver?.name || "No asignado",
       meta: { align: "center" },
       cell: (info: any) => {
@@ -167,7 +167,7 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
       }
     },
     {
-      header: "ESTADO",
+      header: "Estado",
       accessorKey: "status",
       meta: { align: "center" },
       cell: (info: any) => {
@@ -182,7 +182,7 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
       }
     },
     {
-      header: "ACCIONES",
+      header: "Acciones",
       accessorKey: "actions",
       meta: { align: "center" },
       cell: (info: any) => {
