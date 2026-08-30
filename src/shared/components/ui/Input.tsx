@@ -10,21 +10,21 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className = "", error, label, icon, ...props }, ref) => {
     return (
-      <div className="w-full flex flex-col gap-1.5">
+      <div className="w-full flex flex-col gap-1">
         {label && (
-          <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 ml-0.5">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400 ml-0.5 select-none">
             {label}
           </label>
         )}
         <div className="relative w-full">
           {icon && (
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none flex items-center justify-center">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none flex items-center justify-center">
               {icon}
             </div>
           )}
           <input
             ref={ref}
-            className={`${FORM_CONTROL_BASE} ${icon ? "pl-10" : "px-3.5"} ${
+            className={`${FORM_CONTROL_BASE} ${icon ? "pl-9" : "px-3.5"} ${
               error
                 ? "!border-red-500 !focus:border-red-500 !focus:ring-red-500/20"
                 : ""
@@ -33,7 +33,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           />
         </div>
         {error && (
-          <span className="text-[11px] font-medium text-red-500 ml-1 mt-0.5 animate-in fade-in slide-in-from-top-1">
+          <span className="text-xs font-normal text-red-500 ml-1 mt-0.5 animate-in fade-in slide-in-from-top-1">
             {error}
           </span>
         )}

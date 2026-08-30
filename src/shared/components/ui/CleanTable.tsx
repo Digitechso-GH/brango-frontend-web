@@ -61,8 +61,8 @@ export function CleanTable<TData, TValue>({
   const renderPagination = () => {
     if (!pagination) return null;
     return (
-      <div className="p-4 bg-gray-50 dark:bg-[#1A1A24] flex items-center justify-between rounded-b-lg">
-        <div className="text-xs text-gray-500 dark:text-gray-400 font-medium hidden sm:block">
+      <div className="py-2.5 px-4 bg-slate-50/50 dark:bg-[#1A1A24] flex items-center justify-between">
+        <div className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">
           Mostrando {data.length} de {pagination.totalCount} resultados
         </div>
 
@@ -70,17 +70,17 @@ export function CleanTable<TData, TValue>({
           <button
             disabled={pagination.page <= 1}
             onClick={() => pagination.onPageChange(Math.max(1, pagination.page - 1))}
-            className="px-3 py-1.5 text-xs font-bold rounded-md border border-gray-300 dark:border-[#2D2D3D] bg-white dark:bg-[#13131A] hover:bg-gray-50 dark:hover:bg-[#1E1E2D] text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
+            className="px-3 py-1.5 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#13131A] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
           >
             Anterior
           </button>
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-300 px-2">
+          <span className="text-xs font-medium text-slate-600 dark:text-slate-400 px-2">
             Página {pagination.page} de {Math.max(1, pagination.totalPages)}
           </span>
           <button
             disabled={pagination.page >= pagination.totalPages || pagination.totalPages === 0}
             onClick={() => pagination.onPageChange(Math.min(pagination.totalPages, pagination.page + 1))}
-            className="px-3 py-1.5 text-xs font-bold rounded-md border border-gray-300 dark:border-[#2D2D3D] bg-white dark:bg-[#13131A] hover:bg-gray-50 dark:hover:bg-[#1E1E2D] text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
+            className="px-3 py-1.5 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#13131A] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
           >
             Siguiente
           </button>
@@ -92,12 +92,12 @@ export function CleanTable<TData, TValue>({
   return (
     <div className="w-full flex flex-col gap-4">
       {/* --- DESKTOP VIEW --- */}
-      <div className={`w-full bg-white dark:bg-[#13131A] rounded-lg border border-gray-200 dark:border-[#2D2D3D] shadow-sm overflow-hidden flex-col ${mobileConfig ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full bg-white dark:bg-[#1A1A24] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm overflow-hidden flex-col ${mobileConfig ? 'hidden md:flex' : 'flex'}`}>
         <div className="w-full overflow-x-auto custom-scrollbar flex-1">
-          <table className="w-full border-collapse text-left text-xs">
-            <thead className="bg-gray-100 dark:bg-[#1A1A24]">
+          <table className="w-full border-collapse text-left">
+            <thead>
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
+                <tr key={headerGroup.id} className="border-b border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-50/60 dark:bg-slate-900/30">
                   {headerGroup.headers.map((header) => {
                     const meta = header.column.columnDef.meta as any;
                     const alignClass = meta?.align === 'left' ? 'text-left' : meta?.align === 'right' ? 'text-right' : 'text-center';
@@ -105,7 +105,7 @@ export function CleanTable<TData, TValue>({
                     return (
                       <th
                         key={header.id}
-                        className={`border-b border-gray-200 dark:border-[#2D2D3D] py-2 px-3 font-bold text-gray-700 dark:text-gray-400 whitespace-nowrap ${alignClass} ${customClass}`}
+                        className={`py-3 px-4 whitespace-nowrap ${alignClass} ${customClass}`}
                       >
                         {header.isPlaceholder
                           ? null
@@ -119,20 +119,20 @@ export function CleanTable<TData, TValue>({
                 </tr>
               ))}
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, idx) => (
                   <tr key={`skeleton-${idx}`} className="animate-pulse">
                     {table.getVisibleFlatColumns().map((col, cIdx) => (
-                      <td key={cIdx} className="border-b border-gray-200 dark:border-[#2D2D3D] py-2 px-3">
-                        <div className="h-4 bg-gray-200 dark:bg-[#2D2D3D] rounded w-full max-w-[120px] mx-auto"></div>
+                      <td key={cIdx} className="py-3 px-4">
+                        <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-lg w-full max-w-[120px] mx-auto"></div>
                       </td>
                     ))}
                   </tr>
                 ))
               ) : table.getRowModel().rows.length > 0 ? (
                 table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-[#1E1E2D] transition-colors">
+                  <tr key={row.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                     {row.getVisibleCells().map((cell) => {
                       const meta = cell.column.columnDef.meta as any;
                       const alignClass = meta?.align === 'left' ? 'text-left' : meta?.align === 'right' ? 'text-right' : 'text-center';
@@ -140,7 +140,7 @@ export function CleanTable<TData, TValue>({
                       return (
                         <td
                           key={cell.id}
-                          className={`border-b border-gray-200 dark:border-[#2D2D3D] py-2 px-3 text-gray-800 dark:text-gray-200 ${alignClass} ${customClass}`}
+                          className={`py-3 px-4 text-slate-800 dark:text-slate-200 ${alignClass} ${customClass}`}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
@@ -152,7 +152,7 @@ export function CleanTable<TData, TValue>({
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="p-8 text-center text-gray-500 dark:text-gray-400"
+                    className="p-8 text-center text-xs text-slate-400 dark:text-slate-500"
                   >
                     No hay datos para mostrar
                   </td>
@@ -162,12 +162,12 @@ export function CleanTable<TData, TValue>({
           </table>
         </div>
         {pagination && (
-          <div className="border-t border-gray-200 dark:border-[#2D2D3D]">
+          <div className="border-t border-slate-100 dark:border-slate-800">
             {renderPagination()}
           </div>
         )}
         {footer && (
-          <div className="border-t border-gray-200 dark:border-[#2D2D3D]">
+          <div className="border-t border-slate-100 dark:border-slate-800">
             {footer}
           </div>
         )}
@@ -178,22 +178,22 @@ export function CleanTable<TData, TValue>({
         <div className="flex md:hidden flex-col w-full gap-4">
           {isLoading ? (
             Array.from({ length: 5 }).map((_, idx) => (
-              <div key={`mob-skeleton-${idx}`} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col gap-4 animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-8 bg-gray-200 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+              <div key={`mob-skeleton-${idx}`} className="bg-white dark:bg-[#1A1A24] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 flex flex-col gap-3 animate-pulse">
+                <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded w-1/2"></div>
+                <div className="h-6 bg-slate-100 dark:bg-slate-800 rounded w-full"></div>
+                <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded w-1/3"></div>
               </div>
             ))
           ) : table.getRowModel().rows.length > 0 ? (
             <MobileTable rows={table.getRowModel().rows} mobileConfig={mobileConfig} />
           ) : (
-            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500 text-sm">
+            <div className="bg-white dark:bg-[#1A1A24] rounded-2xl border border-slate-200/80 dark:border-slate-800 p-8 text-center text-xs text-slate-400">
               No hay datos para mostrar
             </div>
           )}
 
           {pagination && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="bg-white dark:bg-[#1A1A24] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
               {renderPagination()}
             </div>
           )}

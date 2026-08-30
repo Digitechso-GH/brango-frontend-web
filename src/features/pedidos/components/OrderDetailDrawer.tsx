@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { pedidosApi } from "../api/pedidos.api";
 import { BaseDrawer } from "@/shared/components/ui/BaseDrawer";
 import { Badge } from "@/shared/components/ui/Badge";
+import { Button } from "@/shared/components/ui/Button";
 import { getOrderStatusConfig } from "@/shared/utils/orderStatus.utils";
 import { ORDER_STATUS } from "@/shared/constants/order-status";
 import { 
@@ -279,17 +280,17 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
           {/* 3. Lista de Datos Principales */}
           <div className="flex flex-col border-t border-b border-gray-100 dark:border-[#2D2D3D] py-1">
             {/* Cliente */}
-            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-[#2D2D3D]">
-              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Cliente</span>
-              <span className="text-xs font-bold text-gray-900 dark:text-white text-right">
+            <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Cliente</span>
+              <span className="text-xs font-medium text-slate-900 dark:text-white text-right">
                 {getClientName(order)}
               </span>
             </div>
 
             {/* Chofer Asignado */}
-            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-[#2D2D3D]">
-              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Chofer asignado</span>
-              <span className="text-xs font-bold text-gray-900 dark:text-white text-right">
+            <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Chofer asignado</span>
+              <span className="text-xs font-medium text-slate-900 dark:text-white text-right">
                 {order.driver
                   ? `${order.driver.name || "Sin nombre"}${order.driver.unit ? ` — Unidad ${order.driver.unit}` : ""}`
                   : "No asignado"}
@@ -297,26 +298,26 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
             </div>
 
             {/* Contacto Cliente */}
-            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-[#2D2D3D]">
-              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Contacto cliente</span>
-              <span className="text-xs font-bold text-gray-900 dark:text-white text-right">
+            <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Contacto cliente</span>
+              <span className="text-xs font-medium text-slate-900 dark:text-white text-right">
                 {order.recipientPhone || "-"}
               </span>
             </div>
 
             {/* Contacto Almacén */}
-            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-[#2D2D3D]">
-              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Contacto almacén</span>
-              <span className="text-xs font-bold text-gray-900 dark:text-white text-right">
+            <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Contacto almacén</span>
+              <span className="text-xs font-medium text-slate-900 dark:text-white text-right">
                 {order.warehouseContact || "-"}
               </span>
             </div>
 
             {/* Motivo de Observación (Solo si la asignación activa fue marcada como OBSERVED) */}
             {order.reasonText && (
-              <div className="flex justify-between items-start py-3">
-                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0">Motivo de observación</span>
-                <span className="text-xs font-bold text-red-500 text-right ml-4 max-w-[220px] leading-snug">
+              <div className="flex justify-between items-start py-2.5">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">Motivo de observación</span>
+                <span className="text-xs font-medium text-red-500 text-right ml-4 max-w-[220px] leading-snug">
                   {order.reasonText === 'AUTO_CLOSED_EOD' ? 'Cierre automático fin de jornada (Sin finalizar)' : order.reasonText}
                 </span>
               </div>
@@ -325,23 +326,23 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
 
           {/* 4. Línea de Tiempo */}
           <div className="flex flex-col gap-3 pt-2">
-            <h4 className="text-[11px] font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               LÍNEA DE TIEMPO
             </h4>
 
-            <div className="relative pl-1 flex flex-col gap-5">
-              <div className="absolute left-[17px] top-3 bottom-3 w-[2px] bg-gray-100 dark:bg-[#2D2D3D]"></div>
+            <div className="relative pl-1 flex flex-col gap-4">
+              <div className="absolute left-[17px] top-3 bottom-3 w-[2px] bg-slate-100 dark:bg-slate-800"></div>
 
               {buildTimelineEvents(order).map((timeline) => {
                 if (timeline.isDivider) {
                   return (
-                    <div key={timeline.id} className="relative py-3 w-full z-10 bg-white dark:bg-[#1A1A24]">
+                    <div key={timeline.id} className="relative py-2 w-full z-10 bg-white dark:bg-[#1A1A24]">
                       <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                        <div className="w-full border-t-2 border-dashed border-gray-200 dark:border-[#3D3D4D]"></div>
+                        <div className="w-full border-t border-dashed border-slate-200 dark:border-slate-800"></div>
                       </div>
                       <div className="relative flex justify-center">
-                        <span className="bg-white dark:bg-[#1A1A24] px-3 text-[10px] font-black tracking-widest text-gray-400 dark:text-gray-500 uppercase">
-                          {timeline.label} {timeline.subLabel && <span className="font-medium opacity-60">({timeline.subLabel})</span>}
+                        <span className="bg-white dark:bg-[#1A1A24] px-2.5 text-[10px] font-semibold tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+                          {timeline.label} {timeline.subLabel && <span className="font-normal opacity-70">({timeline.subLabel})</span>}
                         </span>
                       </div>
                     </div>
@@ -351,20 +352,20 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
                 return (
                   <div key={timeline.id} className="relative flex items-start gap-3">
                     <div className="relative z-10 shrink-0 mt-0.5">
-                      <div className={`w-7 h-7 rounded-full bg-white dark:bg-[#1A1A24] flex items-center justify-center shrink-0 z-10 ${
+                      <div className={`w-7 h-7 rounded-full bg-white dark:bg-[#1A1A24] flex items-center justify-center shrink-0 z-10 border border-slate-100 dark:border-slate-800 shadow-2xs ${
                         timeline.color === 'emerald' ? 'text-emerald-500' : 
                         timeline.color === 'amber' ? 'text-amber-500' : 
                         timeline.color === 'red' ? 'text-red-500' : 
-                        'text-gray-400'
+                        'text-slate-400'
                       }`}>
                         {timeline.icon}
                       </div>
                     </div>
                     <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[13px] font-bold leading-tight text-gray-900 dark:text-white">
+                      <span className="text-xs font-medium leading-tight text-slate-900 dark:text-white">
                         {timeline.label}
                       </span>
-                      <span className="text-[11px] font-mono text-gray-400 dark:text-gray-500 mt-0.5 flex gap-1">
+                      <span className="text-[11px] font-normal text-slate-400 dark:text-slate-500 mt-0.5 flex gap-1">
                         <span>{new Date(timeline.date).toLocaleTimeString("es-PE", { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                         {timeline.subLabel && <span>· {timeline.subLabel}</span>}
                       </span>
@@ -375,52 +376,46 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
             </div>
           </div>
 
-          <div className="mt-8 flex items-center justify-between border-t border-gray-100 dark:border-[#2D2D3D] pt-4">
+          <div className="mt-6 flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-4">
             {/* Botón Eliminar: Solo si está PENDING y NO tiene chofer asignado */}
             {order.status === ORDER_STATUS.PENDING && !order.driverId ? (
-              <button
-                type="button"
+              <Button
+                variant="danger"
+                size="sm"
                 disabled={deleteMutation.isPending}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-bold text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-all disabled:opacity-50"
                 onClick={() => {
                   if (window.confirm("¿Estás seguro de que deseas eliminar este pedido permanentemente? Esta acción no se puede deshacer.")) {
                     deleteMutation.mutate(order.id);
                   }
                 }}
               >
-                <IconTrash size={16} stroke={2.5} />
-                {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
-              </button>
+                <IconTrash size={15} />
+                <span>{deleteMutation.isPending ? "Eliminando..." : "Eliminar"}</span>
+              </Button>
             ) : (
               <div /> /* Espaciador para mantener el justify-between */
             )}
 
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               disabled={order.status !== ORDER_STATUS.OBSERVED}
-              className={`px-5 py-2.5 border rounded-xl text-[13px] font-bold transition-all ${
-                order.status === ORDER_STATUS.OBSERVED
-                  ? 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm'
-                  : 'border-gray-200 dark:border-gray-800 text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-[#1A1A24] cursor-not-allowed opacity-70'
-              }`}
-              onClick={() => {
-                setIsReassignModalOpen(true);
-              }}
+              onClick={() => setIsReassignModalOpen(true)}
             >
               Reasignar unidad
-            </button>
+            </Button>
           </div>
 
           {/* Modal Overlay de Reasignación */}
           {isReassignModalOpen && (
-            <div className="absolute inset-0 z-50 bg-white/80 dark:bg-[#13131A]/80 backdrop-blur-sm flex flex-col items-center justify-center p-6">
-              <div className="bg-white dark:bg-[#1A1A24] border border-gray-200 dark:border-[#2D2D3D] rounded-2xl shadow-xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-200">
-                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">Reasignar Pedido</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                  Elige a la nueva unidad que se encargará de realizar este recorrido desde cero.
+            <div className="absolute inset-0 z-50 bg-gray-900/40 flex flex-col items-center justify-center p-6">
+              <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-150">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-1">Reasignar Pedido</h3>
+                <p className="text-xs font-normal text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">
+                  Elige a la nueva unidad que se encargará de realizar este recorrido.
                 </p>
 
-                <div className="relative mb-6">
+                <div className="relative mb-4">
                   <Select
                     options={[
                       { label: "Seleccionar un chofer...", value: "" },
@@ -435,34 +430,35 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
                 </div>
 
                 <div className="relative mb-6">
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
                     Fecha de reasignación
                   </label>
                   <input
                     type="date"
-                    className="w-full bg-gray-50 dark:bg-[#13131A] border border-gray-200 dark:border-[#2D2D3D] text-gray-900 dark:text-white text-sm font-bold rounded-xl px-4 py-3.5 outline-none focus:border-blue-500 transition-colors"
+                    className="w-full bg-slate-50/60 dark:bg-[#13131A] border border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-white text-xs font-normal rounded-xl px-3.5 py-2 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
                   />
                 </div>
 
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    disabled={reassignMutation.isPending}
-                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-[#2D2D3D] text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-50 dark:hover:bg-[#2D2D3D]/50 transition-colors"
+                <div className="flex gap-2.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
                     onClick={() => setIsReassignModalOpen(false)}
                   >
                     Cancelar
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="flex-1"
                     disabled={!selectedDriverId || reassignMutation.isPending}
-                    className="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     onClick={() => reassignMutation.mutate(selectedDriverId)}
                   >
                     {reassignMutation.isPending ? "Procesando..." : "Confirmar"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

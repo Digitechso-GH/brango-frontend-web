@@ -6,7 +6,14 @@ import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
 import { Select } from "@/shared/components/ui/Select";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
-import { IconEye, IconPencil, IconMapPin, IconSearch, IconChevronLeft, IconChevronRight, IconTrash } from "@tabler/icons-react";
+import { 
+  IconEye, 
+  IconPencil, 
+  IconSearch, 
+  IconTrash, 
+  IconUpload, 
+  IconPlus 
+} from "@tabler/icons-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { pedidosApi } from "../api/pedidos.api";
@@ -27,9 +34,11 @@ import { ORDER_STATUS } from "@/shared/constants/order-status";
 
 interface OrderTableProps {
   onEdit?: (order: any) => void;
+  onCreate?: () => void;
+  onImportExcel?: () => void;
 }
 
-export const OrderTable = ({ onEdit }: OrderTableProps) => {
+export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps) => {
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [selectedDriver, setSelectedDriver] = useState("");
 
@@ -65,13 +74,12 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
     setRowSelection({});
     setSelectedDriver("");
   });
-  const startRouteMutation = useStartRouteMutation();
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => pedidosApi.deleteOrder(id),
     onSuccess: () => {
       toast.success("Pedido eliminado exitosamente");
-      queryClient.invalidateQueries({ queryKey: ["pedidos"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
     onError: (error: any) => {
       toast.error(
@@ -82,17 +90,25 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
   });
 
   const columns = [
-    { header: "Nº Pedido", accessorKey: "code" },
-    {
-      header: "Guía",
-      accessorKey: "waybill",
+    { 
+      header: "PEDIDO", 
+      accessorKey: "code",
       cell: (info: any) => {
-        const val = info.getValue();
-        return val ? <span className="font-mono text-gray-500">#{val}</span> : <span className="text-gray-400">-</span>;
+        const row = info.row.original;
+        return (
+          <div className="flex flex-col">
+            <span className="font-bold text-xs text-slate-900 dark:text-white">
+              #{row.code || info.getValue()}
+            </span>
+            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+              {row.waybill ? `#${row.waybill}` : "sin guía"}
+            </span>
+          </div>
+        );
       }
     },
     {
-      header: "Cliente",
+      header: "CLIENTE",
       accessorFn: (row: any) => {
         if (row.recipientCustomerType === "INDIVIDUAL") {
           return row.recipientName ?? "—";
@@ -107,19 +123,19 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
             : (row.customer?.name ?? "—");
 
         return (
-          <span className="font-bold text-gray-900 dark:text-white">
+          <span className="font-bold text-xs text-slate-900 dark:text-white">
             {mainName}
           </span>
         );
       }
     },
     {
-      header: "Dirección de Entrega",
+      header: "DIRECCIÓN DE ENTREGA",
       accessorFn: (row: any) => row.formattedAddress || row.rawAddress || "-",
+      meta: { align: "center" },
       cell: (info: any) => {
         const row = info.row.original;
 
-        // Preferencia de visualización en UI (dirección formateada de geocoding o cruda)
         let displayAddress = row.formattedAddress;
         if (!displayAddress || displayAddress.startsWith("http")) {
           displayAddress = row.rawAddress;
@@ -130,65 +146,54 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
             : "Dirección de entrega";
         }
 
-        // Resolver la URL de Google Maps
-        let mapsUrl = "";
-        if (row.rawAddress && row.rawAddress.startsWith("http")) {
-          mapsUrl = row.rawAddress;
-        } else if (row.latitude && row.longitude) {
-          mapsUrl = `https://www.google.com/maps/search/?api=1&query=${row.latitude},${row.longitude}`;
-        } else if (displayAddress && !displayAddress.startsWith("http")) {
-          mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayAddress)}`;
+        return (
+          <span className="text-xs font-normal text-slate-600 dark:text-slate-300 truncate max-w-xs block text-center mx-auto" title={displayAddress}>
+            {displayAddress}
+          </span>
+        );
+      }
+    },
+    {
+      header: "CHOFER",
+      accessorFn: (row: any) => row.driver?.name || "No asignado",
+      meta: { align: "center" },
+      cell: (info: any) => {
+        const driverName = info.row.original.driver?.name;
+        if (!driverName) {
+          return <span className="text-xs italic text-slate-400 font-normal">No asignado</span>;
         }
 
+        const initial = driverName.charAt(0).toUpperCase();
+
         return (
-          <div className="flex items-start gap-1.5 max-w-xs mx-auto">
-            {mapsUrl && (
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                title="Ver ubicación en el mapa"
-                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:scale-110 transition-transform shrink-0 mt-0.5"
-              >
-                <IconMapPin size={16} />
-              </a>
-            )}
-            <span className="font-bold text-gray-900 dark:text-white leading-snug line-clamp-2">
-              {displayAddress}
+          <div className="inline-flex items-center gap-2 justify-center">
+            <span className="w-6 h-6 rounded-full bg-purple-100/80 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold text-[11px] shrink-0">
+              {initial}
+            </span>
+            <span className="font-medium text-xs text-slate-800 dark:text-slate-200">
+              {driverName}
             </span>
           </div>
         );
       }
     },
     {
-      header: "Chofer",
-      accessorFn: (row: any) => row.driver?.name || "No asignado",
-      cell: (info: any) => {
-        const val = info.row.original.driver?.name;
-        return val ? (
-          <span className="font-bold text-gray-900 dark:text-white">{val}</span>
-        ) : (
-          <span className="text-gray-400 font-medium">No asignado</span>
-        );
-      }
-    },
-    {
-      header: "Estado",
+      header: "ESTADO",
       accessorKey: "status",
+      meta: { align: "center" },
       cell: (info: any) => {
         const val = info.getValue();
         const statusConfig = getOrderStatusConfig(val);
 
         return (
-          <Badge variant={statusConfig.variant}>
+          <Badge variant={statusConfig.variant} withDot>
             {statusConfig.label}
           </Badge>
         );
       }
     },
     {
-      header: "Acciones",
+      header: "ACCIONES",
       accessorKey: "actions",
       meta: { align: "center" },
       cell: (info: any) => {
@@ -197,57 +202,37 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
         const isDeletable = order.status === ORDER_STATUS.PENDING && !order.driverId;
 
         return (
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-2">
             <button
               title="Ver Detalles"
-              className="text-gray-400 hover:text-accent transition-colors cursor-pointer"
+              className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               onClick={() => {
                 setActiveOrderId(order.id);
                 setDrawerOpen(true);
               }}
             >
-              <IconEye size={18} stroke={2} />
+              <IconEye size={17} />
             </button>
-            {isEditable ? (
-              <button
-                title="Editar Pedido"
-                className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-                onClick={() => onEdit && onEdit(order)}
-              >
-                <IconPencil size={18} stroke={2} />
-              </button>
-            ) : (
-              <button
-                disabled
-                title="Solo se pueden editar pedidos en estado Pendiente"
-                className="text-gray-300 dark:text-gray-600 opacity-60 cursor-default select-none pointer-events-none"
-              >
-                <IconPencil size={18} stroke={1.6} />
-              </button>
-            )}
-
-            {isDeletable ? (
-              <button
-                title="Eliminar Pedido"
-                className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
-                onClick={() => {
-                  if (window.confirm("¿Estás seguro de eliminar este pedido? Esta acción no se puede deshacer.")) {
-                    deleteMutation.mutate(order.id);
-                  }
-                }}
-                disabled={deleteMutation.isPending}
-              >
-                <IconTrash size={18} stroke={2} />
-              </button>
-            ) : (
-              <button
-                disabled
-                title="Solo se pueden eliminar pedidos en estado Pendiente y sin asignar"
-                className="text-gray-300 dark:text-gray-600 opacity-60 cursor-default select-none pointer-events-none"
-              >
-                <IconTrash size={18} stroke={1.6} />
-              </button>
-            )}
+            <button
+              title={isEditable ? "Editar Pedido" : "Solo se pueden editar pedidos en estado Pendiente"}
+              disabled={!isEditable}
+              className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-25 disabled:pointer-events-none cursor-pointer"
+              onClick={() => onEdit && onEdit(order)}
+            >
+              <IconPencil size={17} />
+            </button>
+            <button
+              title={isDeletable ? "Eliminar Pedido" : "Solo se pueden eliminar pedidos en estado Pendiente y sin asignar"}
+              disabled={!isDeletable || deleteMutation.isPending}
+              className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:opacity-25 disabled:pointer-events-none cursor-pointer"
+              onClick={() => {
+                if (window.confirm("¿Estás seguro de eliminar este pedido? Esta acción no se puede deshacer.")) {
+                  deleteMutation.mutate(order.id);
+                }
+              }}
+            >
+              <IconTrash size={17} />
+            </button>
           </div>
         );
       }
@@ -258,7 +243,7 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
   const driverOptions = [
     { label: "Seleccionar chofer...", value: "" },
     ...drivers.map((d: any) => ({
-      label: `${d.name || "Sin nombre"} (${d.unit || "Sin unidad"})`,
+      label: `${d.name || "Sin nombre"}${d.unit ? ` (${d.unit})` : ""}`,
       value: d.id,
     })),
   ];
@@ -280,26 +265,29 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Barra de Asignación por Lote */}
       {selectedOrderIds.length > 0 && (
-        <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
+        <div className="bg-blue-50/70 dark:bg-blue-900/20 border border-blue-200/60 dark:border-blue-800/40 rounded-2xl p-3.5 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2.5">
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-semibold">
               {selectedOrderIds.length}
             </span>
-            <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
+            <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
               Pedidos seleccionados para asignar
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-64">
+          <div className="flex items-center gap-2.5">
+            <div className="w-60">
               <Select
                 options={driverOptions}
                 value={selectedDriver}
                 onChange={(val) => setSelectedDriver(val)}
+                variant="filter"
               />
             </div>
             <Button
               variant="primary"
+              size="sm"
               disabled={!selectedDriver || assignDriverMutation.isPending}
               onClick={handleAssignDriver}
             >
@@ -309,83 +297,64 @@ export const OrderTable = ({ onEdit }: OrderTableProps) => {
         </div>
       )}
 
-      <div className="bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm overflow-hidden flex flex-col">
-        {/* Header con Buscador */}
-        <div className="p-4 border-b border-gray-100 dark:border-[#2D2D3D] flex items-center justify-between">
-          <div className="relative w-full max-w-md">
-            <IconSearch size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por cliente, pedido, guía..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-[#181824] border border-gray-200 dark:border-[#2D2D3D] rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-900 dark:text-white placeholder-gray-400"
-            />
-          </div>
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            {meta.total} resultados
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <CleanTable
-            columns={columns}
-            data={orders}
-            isLoading={isLoading}
-            rowSelection={rowSelection}
-            onRowSelectionChange={setRowSelection}
-            enableRowSelection={(row) => row.original.status === ORDER_STATUS.PENDING}
+      {/* Barra Superior: Buscador + Contador + Botones de Acción */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative w-full sm:w-80">
+          <IconSearch size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Buscar por cliente, pedido, guía..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#1A1A24] border border-slate-200/90 dark:border-slate-800 rounded-2xl text-xs sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900 dark:text-white placeholder-slate-400 shadow-xs"
           />
         </div>
-        
-        {/* Footer con Paginación */}
-        {/* Footer con Paginación - Comentado para futura facturación
-        <div className="p-4 border-t border-gray-100 dark:border-[#2D2D3D] flex items-center justify-between bg-gray-50/50 dark:bg-[#181824]/50">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Mostrar:</span>
-            <select
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value))}
-              className="bg-white dark:bg-[#1D1D2B] border border-gray-200 dark:border-[#2D2D3D] rounded-lg text-sm font-medium px-2 py-1 focus:outline-none text-gray-700 dark:text-gray-300"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </div>
 
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              Página {meta.page} de {meta.totalPages}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={meta.page <= 1}
-                className="px-2"
-              >
-                <IconChevronLeft size={18} />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
-                disabled={meta.page >= meta.totalPages}
-                className="px-2"
-              >
-                <IconChevronRight size={18} />
-              </Button>
-            </div>
-          </div>
+        <div className="flex items-center gap-3 justify-between sm:justify-end">
+          <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+            {meta.total} resultados
+          </span>
+
+          {onImportExcel && (
+            <Button variant="outline" size="md" onClick={onImportExcel} className="rounded-xl">
+              <IconUpload size={16} />
+              <span>Cargar Excel</span>
+            </Button>
+          )}
+
+          {onCreate && (
+            <Button variant="primary" size="md" onClick={onCreate} className="rounded-xl">
+              <IconPlus size={16} />
+              <span>Nuevo pedido</span>
+            </Button>
+          )}
         </div>
-        */}
       </div>
 
+      {/* Tabla de Pedidos */}
+      <CleanTable
+        columns={columns}
+        data={orders}
+        isLoading={isLoading}
+        rowSelection={rowSelection}
+        onRowSelectionChange={setRowSelection}
+        enableRowSelection={(row) => row.original.status === ORDER_STATUS.PENDING}
+        pagination={{
+          page,
+          totalPages: meta.totalPages,
+          totalCount: meta.total,
+          onPageChange: setPage,
+        }}
+      />
+
+      {/* Drawer de Detalle */}
       <OrderDetailDrawer
-        isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
         orderId={activeOrderId}
+        isOpen={drawerOpen}
+        onClose={() => {
+          setDrawerOpen(false);
+          setActiveOrderId(undefined);
+        }}
       />
     </div>
   );

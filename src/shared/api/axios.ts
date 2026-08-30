@@ -1,5 +1,7 @@
 import axios from "axios";
 import { toast } from "sonner";
+import { API_ENDPOINTS } from "@/shared/constants/api-endpoints";
+import { ROUTES } from "@/shared/constants/routes";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 if (!apiUrl) {
@@ -62,8 +64,8 @@ api.interceptors.response.use(
       error.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes("/auth/login") &&
-      !originalRequest.url?.includes("/auth/refresh")
+      !originalRequest.url?.includes(API_ENDPOINTS.AUTH.LOGIN) &&
+      !originalRequest.url?.includes(API_ENDPOINTS.AUTH.REFRESH)
     ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -96,7 +98,7 @@ api.interceptors.response.use(
         }
 
         // Llamar con instancia pura de axios para evitar loops en interceptores
-        const res = await axios.post(`${apiUrl}/auth/refresh`, { refreshToken });
+        const res = await axios.post(`${apiUrl}${API_ENDPOINTS.AUTH.REFRESH}`, { refreshToken });
         const data = res.data.data ?? res.data;
         const newToken = data.token;
         const newRefreshToken = data.refreshToken;
@@ -121,8 +123,9 @@ api.interceptors.response.use(
         processQueue(refreshErr, null);
         if (typeof window !== "undefined") {
           localStorage.removeItem("auth-storage");
-          if (!window.location.pathname.includes("/login")) {
-            window.location.href = "/login";
+          document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax;";
+          if (!window.location.pathname.includes(ROUTES.LOGIN)) {
+            window.location.href = ROUTES.LOGIN;
           }
         }
         return Promise.reject(refreshErr);

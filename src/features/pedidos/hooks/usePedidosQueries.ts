@@ -23,6 +23,14 @@ export const useDriversQuery = (enabled: boolean = true) => {
   });
 };
 
+export const useAvailableDriversQuery = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["available-drivers"],
+    queryFn: pedidosApi.getAvailableDrivers,
+    enabled,
+  });
+};
+
 export const useSedesQuery = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["sedes"],

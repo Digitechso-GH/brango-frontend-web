@@ -31,7 +31,7 @@ export const authApi = {
         id: rawUser.id,
         name: rawUser.name || "",
         email: rawUser.email,
-        role: rawUser.rol || "",
+        role: rawUser.role || rawUser.rol || "",
         driverId: rawUser.driverId,
         unit: rawUser.unit,
       }
@@ -45,5 +45,13 @@ export const authApi = {
       token: data.token,
       refreshToken: data.refreshToken,
     };
+  },
+
+  logout: async (): Promise<void> => {
+    try {
+      await api.post(API_ENDPOINTS.AUTH.LOGOUT);
+    } catch {
+      // Ignorar error de red si ya expiró
+    }
   },
 };

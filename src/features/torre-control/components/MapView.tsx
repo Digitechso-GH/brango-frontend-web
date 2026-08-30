@@ -5,10 +5,12 @@ import { GoogleMapView } from "@/shared/integrations/google/components/GoogleMap
 import { useDriverTrackingSocket } from "../hooks/useDriverTrackingSocket";
 import { useMapRoute } from "../hooks/useMapRoute";
 import { useDriversQuery, usePedidosTodayQuery, useSedesQuery } from "@/features/pedidos/hooks/usePedidosQueries";
-import { ORDER_STATUS_DETAILS } from "@/shared/constants/order-status";
+import { ORDER_STATUS_DETAILS, ORDER_STATUS } from "@/shared/constants/order-status";
 
 interface MapViewProps {
   focusedOrder?: any | null;
+  selectedOrderIds?: string[];
+  onSelectOrderForRoute?: (id: string) => void;
 }
 
 const TRUCK_MARKER_HTML = (color: string) => `
@@ -17,9 +19,9 @@ const TRUCK_MARKER_HTML = (color: string) => `
   </div>
 `;
 
-const DESTINATION_MARKER_HTML = (color: string) => `
+const DESTINATION_MARKER_HTML = (color: string, label?: string) => `
   <div style="background: ${color}; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer;">
-    <span style="font-size: 18px; line-height: 1;">📍</span>
+    <span style="font-size: 16px; font-weight: bold; color: white; line-height: 1;">${label || '📍'}</span>
   </div>
 `;
 
@@ -40,10 +42,10 @@ function createAdvancedMarker(options: {
   });
 }
 
-export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
+export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds = [], onSelectOrderForRoute }) => {
   const [googleMap, setGoogleMap] = useState<google.maps.Map | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
-  const [timeTick, setTimeTick] = useState(0); // Reloj para actualizar visualmente la última vez visto en tiempo real
+  const [timeTick, setTimeTick] = useState(0); 
 
   const { locations } = useDriverTrackingSocket();
   const { data: drivers = [] } = useDriversQuery();
@@ -55,7 +57,6 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
 
   const markersRef = useRef<any[]>([]);
 
-  // Temporizador para recalcular y re-renderizar el tiempo relativo transcurrido en el UI cada 60s
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeTick((prev) => prev + 1);
@@ -63,9 +64,6 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
     return () => clearInterval(interval);
   }, []);
 
-
-
-  // Sincronizar pedido enfocado desde la lista lateral
   useEffect(() => {
     if (focusedOrder) {
       setSelectedOrder(focusedOrder);
@@ -323,7 +321,98 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder }) => {
         markersRef.current.push(destMarker);
       }
     }
-  }, [googleMap, selectedOrder, locations, drivers, allTodayOrders, timeTick]);
+
+  }, [googleMap, selectedOrder, locations, drivers, allTodayOrders, timeTick, clearRoute, drawMultiStopRoute]); // REMOVED selectedOrderIds to prevent wiping all drivers
+
+  // Efecto dedicado EXCLUSIVAMENTE al Route Builder y pedidos pendientes
+  // Sigue la regla: solo actualiza el HTML de los marcadores existentes, no hace llamadas a Routes API
+  const routeMarkersDict = useRef<Record<string, google.maps.marker.AdvancedMarkerElement>>({});
+
+  useEffect(() => {
+    if (!googleMap) return;
+
+    const infoWindow = new google.maps.InfoWindow();
+    googleMap.addListener("click", () => infoWindow.close());
+
+    const currentIds = new Set<string>();
+
+    // 1. Dibujar Route Builder (SIN polilínea, solo marcadores numerados)
+    const selectedOrdersFull = selectedOrderIds.map(id => allTodayOrders.find((o: any) => o.id === id)).filter(Boolean);
+    
+    selectedOrdersFull.forEach((order: any, idx: number) => {
+      const pt = { lat: Number(order.latitude), lng: Number(order.longitude) };
+      const markerId = `route-${order.id}`;
+      currentIds.add(markerId);
+
+      const htmlContent = DESTINATION_MARKER_HTML("#3D5FFF", `${idx + 1}`);
+
+      if (routeMarkersDict.current[markerId]) {
+        // Actualizar solo el número (innerHTML) sin recrear el marcador en el mapa
+        const container = routeMarkersDict.current[markerId].content as HTMLElement;
+        if (container) container.innerHTML = htmlContent.trim();
+      } else {
+        // Crear nuevo si no existía
+        const destMarker = createAdvancedMarker({
+          position: pt,
+          map: googleMap,
+          title: `Ruta: ${order.code}`,
+          htmlContent: htmlContent,
+        });
+
+        destMarker.addListener("gmp-click", () => {
+          infoWindow.setContent(`<div style="padding: 5px;">Parada ${idx + 1}: <b>${order.code}</b></div>`);
+          infoWindow.open(googleMap, destMarker);
+        });
+
+        routeMarkersDict.current[markerId] = destMarker;
+      }
+    });
+
+    // 2. Dibujar Pedidos Pendientes Sin Asignar (Rojos)
+    const pendingUnassigned = allTodayOrders.filter(
+      (o: any) => o.status === ORDER_STATUS.PENDING && !o.routeAssignmentId && !o.driverId && !selectedOrderIds.includes(o.id)
+    );
+
+    pendingUnassigned.forEach((order: any) => {
+      if (order.latitude && order.longitude) {
+        const pt = { lat: Number(order.latitude), lng: Number(order.longitude) };
+        const markerId = `pending-${order.id}`;
+        currentIds.add(markerId);
+
+        const htmlContent = DESTINATION_MARKER_HTML("#EF4444");
+
+        if (routeMarkersDict.current[markerId]) {
+          const container = routeMarkersDict.current[markerId].content as HTMLElement;
+          if (container) container.innerHTML = htmlContent.trim();
+        } else {
+          const unassignedMarker = createAdvancedMarker({
+            position: pt,
+            map: googleMap,
+            title: `Pendiente: ${order.code}`,
+            htmlContent: htmlContent,
+          });
+
+          unassignedMarker.addListener("gmp-click", () => {
+            if (onSelectOrderForRoute) {
+              onSelectOrderForRoute(order.id);
+            }
+          });
+
+          routeMarkersDict.current[markerId] = unassignedMarker;
+        }
+      }
+    });
+
+    // 3. Limpieza de marcadores que ya no están en las listas
+    Object.keys(routeMarkersDict.current).forEach((id) => {
+      if (!currentIds.has(id)) {
+        const m = routeMarkersDict.current[id];
+        if (m.map) m.map = null;
+        delete routeMarkersDict.current[id];
+      }
+    });
+
+  }, [googleMap, selectedOrderIds, allTodayOrders, onSelectOrderForRoute]);
 
   const activeMapId = "DEMO_MAP_ID";
 

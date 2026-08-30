@@ -28,15 +28,19 @@ const normalizeOrder = (raw: any) => {
   // Asignación activa: siempre ordenar explícitamente por createdAt desc para asegurar robustez
   let activeAssignment = undefined;
   if (raw.assignments && raw.assignments.length > 0) {
-    const sortedAssignments = [...raw.assignments].sort(
-      (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    activeAssignment = sortedAssignments[0];
+    const validAssignments = raw.assignments.filter((a: any) => !a.voidedAt);
+    if (validAssignments.length > 0) {
+      const sortedAssignments = validAssignments.sort(
+        (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      activeAssignment = sortedAssignments[0];
+    }
   }
   const status = activeAssignment?.status || "PENDING";
-  const isCancelled = status === "CANCELLED";
-  const driverObj = (activeAssignment?.driver && !isCancelled) ? normalizeDriver(activeAssignment.driver) : null;
-  const canonicalDriverId = isCancelled ? null : (activeAssignment?.driverId || null);
+  // En el nuevo modelo, si no hay activeAssignment válido (todos fueron voided), se considera PENDING y sin chofer
+  const isCancelled = false; // Ya no hay estado CANCELLED, el pedido vuelve a ser un Order sin asignación activa
+  const driverObj = activeAssignment?.driver ? normalizeDriver(activeAssignment.driver) : null;
+  const canonicalDriverId = activeAssignment?.driverId || null;
   const sequenceIndex = activeAssignment?.sequenceIndex ?? 0;
   
   // Regla estricta: reasonText solo si la asignación activa está OBSERVED
@@ -103,6 +107,12 @@ export const pedidosApi = {
 
   getDrivers: async () => {
     const res = await api.get(API_ENDPOINTS.DRIVERS);
+    const rawData = res.data.data ?? res.data ?? [];
+    return Array.isArray(rawData) ? rawData.map(normalizeDriver) : [];
+  },
+
+  getAvailableDrivers: async () => {
+    const res = await api.get(`${API_ENDPOINTS.DRIVERS}/available`);
     const rawData = res.data.data ?? res.data ?? [];
     return Array.isArray(rawData) ? rawData.map(normalizeDriver) : [];
   },

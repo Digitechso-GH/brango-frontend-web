@@ -83,11 +83,8 @@ export const useMapRoute = (map: google.maps.Map | null) => {
           activePolylinesRef.current.push(polyline);
         }
       }
-
-      map.fitBounds(bounds, { top: 80, right: 80, bottom: 80, left: 80 });
     } catch (err) {
       console.error("Error al trazar la ruta serpiente multiparada:", err);
-      map.fitBounds(bounds, { top: 80, right: 80, bottom: 80, left: 80 });
     }
   };
 

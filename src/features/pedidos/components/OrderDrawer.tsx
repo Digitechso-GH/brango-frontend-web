@@ -261,37 +261,37 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
       <div className="flex flex-col gap-4 py-1">
         {/* SECCIÓN 1: IDENTIFICACIÓN DEL PEDIDO */}
         <div className="flex flex-col gap-3">
-          <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             INFORMACIÓN DEL PEDIDO
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="Nº pedido *"
               placeholder="Ej. 22208"
-              icon={<IconHash size={16} />}
+              icon={<IconHash size={15} />}
               error={errors.code?.message?.toString()}
               {...register("code")}
             />
             <Input
               label="Guía de remisión (Opcional)"
               placeholder="Ej. 004521"
-              icon={<IconFileText size={16} />}
+              icon={<IconFileText size={15} />}
               error={errors.waybill?.message?.toString()}
               {...register("waybill")}
             />
           </div>
         </div>
 
-        <hr className="border-t border-gray-100 dark:border-[#2D2D3D] my-1" />
+        <hr className="border-t border-slate-100 dark:border-slate-800 my-1" />
 
         {/* SECCIÓN 2: DOCUMENTO */}
         <div className="flex flex-col gap-3">
-          <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             DOCUMENTO
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 ml-0.5">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-400 ml-0.5 select-none">
                 Tipo (Opcional)
               </label>
               <Select
@@ -314,11 +314,11 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
           </div>
         </div>
 
-        <hr className="border-t border-gray-100 dark:border-[#2D2D3D] my-1" />
+        <hr className="border-t border-slate-100 dark:border-slate-800 my-1" />
 
         {/* SECCIÓN 3: CLIENTE */}
         <div className="flex flex-col gap-3">
-          <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             CLIENTE
           </div>
           <Input
@@ -331,30 +331,30 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
             <Input
               label="Contacto cliente *"
               placeholder="987 654 321"
-              icon={<IconPhone size={16} />}
+              icon={<IconPhone size={15} />}
               error={errors.recipientPhone?.message?.toString()}
               {...register("recipientPhone")}
             />
             <Input
               label="Contacto almacén *"
               placeholder="962 854 129"
-              icon={<IconBuildingWarehouse size={16} />}
+              icon={<IconBuildingWarehouse size={15} />}
               error={errors.warehouseContact?.message?.toString()}
               {...register("warehouseContact")}
             />
           </div>
         </div>
 
-        <hr className="border-t border-gray-100 dark:border-[#2D2D3D] my-1" />
+        <hr className="border-t border-slate-100 dark:border-slate-800 my-1" />
 
         {/* SECCIÓN 4: ENTREGA */}
         <div className="flex flex-col gap-3">
-          <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             ENTREGA
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 ml-0.5">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-400 ml-0.5 select-none">
                 Dirección de entrega *
               </label>
               <button
@@ -367,14 +367,14 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
                   setValue("latitude", "");
                   setValue("longitude", "");
                 }}
-                className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline transition-colors"
+                className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline transition-colors cursor-pointer"
               >
                 {addressMode === "search" ? "Pegar URL de Maps" : "Buscar Dirección"}
               </button>
             </div>
             <div className="relative w-full">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none flex items-center justify-center">
-                <IconMapPin size={16} />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none flex items-center justify-center">
+                <IconMapPin size={15} />
               </div>
               <input
                 ref={addressInputRef}
@@ -386,21 +386,21 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
                 }
                 value={watch("rawAddress") || ""}
                 onChange={(e) => handleAddressChange(e.target.value)}
-                className={`${FORM_CONTROL_BASE} pl-10 pr-3.5 text-sm`}
+                className={`${FORM_CONTROL_BASE} pl-9 pr-3.5`}
               />
 
               {predictions.length > 0 && addressMode === "search" && (
-                <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#1D1D2B] border border-gray-200 dark:border-[#2D2D3D] rounded-xl shadow-xl z-[9999] max-h-56 overflow-y-auto p-1 animate-in fade-in slide-in-from-top-1">
+                <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#1A1A24] border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-xl z-[9999] max-h-56 overflow-y-auto p-1.5 animate-in fade-in zoom-in-95 duration-150">
                   {predictions.map((item, idx) => (
                     <div
                       key={item.placePrediction?.placeId || item.place_id || idx}
                       onClick={() => handleSelectPrediction(item)}
-                      className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg cursor-pointer transition-colors border-b border-gray-50 dark:border-white/5 last:border-none"
+                      className="p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl cursor-pointer transition-colors border-b border-slate-100 dark:border-slate-800/60 last:border-none"
                     >
-                      <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                      <p className="text-xs font-medium text-slate-900 dark:text-white leading-tight">
                         {item.placePrediction?.text?.text || item.structured_formatting?.main_text || item.description}
                       </p>
-                      <p className="text-[10px] text-gray-500 truncate mt-0.5">
+                      <p className="text-[11px] font-normal text-slate-400 truncate mt-0.5">
                         {item.placePrediction?.text?.text ? "Perú" : (item.structured_formatting?.secondary_text || item.description)}
                       </p>
                     </div>
@@ -409,19 +409,19 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
               )}
             </div>
             {watch("latitude") && watch("longitude") && (
-              <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5 ml-0.5">
+              <p className="text-xs font-normal text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5 ml-0.5">
                 ✓ Ubicación confirmada (Lat: {Number(watch("latitude")).toFixed(4)}, Lng: {Number(watch("longitude")).toFixed(4)})
               </p>
             )}
             {errors.rawAddress?.message && (
-              <p className="text-[10px] font-bold text-red-500 mt-0.5 ml-0.5">{errors.rawAddress.message?.toString()}</p>
+              <p className="text-xs font-normal text-red-500 mt-0.5 ml-0.5">{errors.rawAddress.message?.toString()}</p>
             )}
           </div>
 
           {/* Asignar Chofer (Opcional) */}
-          <div className="flex flex-col gap-1.5 pt-1">
-            <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 ml-0.5">
-              Asignar chofer <span className="text-gray-400 font-normal">(Opcional)</span>
+          <div className="flex flex-col gap-1 pt-1">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 ml-0.5 select-none">
+              Asignar chofer <span className="text-slate-400 font-normal">(Opcional)</span>
             </label>
             <Select
               value={selectedDriverId || ""}

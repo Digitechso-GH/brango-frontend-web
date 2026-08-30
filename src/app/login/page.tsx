@@ -9,18 +9,10 @@ import { ROUTES } from "@/shared/constants/routes";
 import { IconMail, IconLock, IconArrowRight, IconLoader2 } from "@tabler/icons-react";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { token, setAuth, hasHydrated } = useAuthStore();
+  const { setAuth } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  // Redirigir si ya tiene sesión activa (solo después de hidratar)
-  useEffect(() => {
-    if (hasHydrated && token) {
-      router.replace(ROUTES.ADMIN.TORRE_CONTROL);
-    }
-  }, [hasHydrated, token, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +31,7 @@ export default function LoginPage() {
       });
       setAuth(res.token, res.refreshToken, res.user);
       toast.success(`¡Bienvenido de nuevo, ${res.user.name}!`);
-      router.replace(ROUTES.ADMIN.TORRE_CONTROL);
+      window.location.href = ROUTES.ADMIN.TORRE_CONTROL;
     } catch (err: any) {
       console.error("Login error:", err);
       const msg = err.response?.data?.message || "Credenciales incorrectas. Verifique e intente nuevamente.";

@@ -29,12 +29,23 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       hasHydrated: false,
       setHasHydrated: (state) => set({ hasHydrated: state }),
-      setAuth: (token, refreshToken, user) => set({ token, refreshToken, user }),
-      updateToken: (token, refreshToken) => set((state) => ({ token, refreshToken: refreshToken || state.refreshToken })),
+      setAuth: (token, refreshToken, user) => {
+        set({ token, refreshToken, user });
+        if (typeof window !== "undefined") {
+          document.cookie = `auth_token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax;`;
+        }
+      },
+      updateToken: (token, refreshToken) => {
+        set((state) => ({ token, refreshToken: refreshToken || state.refreshToken }));
+        if (typeof window !== "undefined") {
+          document.cookie = `auth_token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax;`;
+        }
+      },
       logout: () => {
         set({ token: null, refreshToken: null, user: null });
         if (typeof window !== "undefined") {
           localStorage.removeItem("auth-storage");
+          document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax;";
         }
       },
     }),

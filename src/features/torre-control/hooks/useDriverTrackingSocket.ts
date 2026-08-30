@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { DriverLocationSchema } from "@/features/pedidos/types/pedidos.schemas";
 import { authApi } from "@/features/auth/api/auth.api";
+import { ROUTES } from "@/shared/constants/routes";
 
 export interface DriverLocation {
   driverId: string;
@@ -83,8 +84,8 @@ export const useDriverTrackingSocket = () => {
           socket.disconnect();
           if (typeof window !== "undefined") {
             localStorage.removeItem("auth-storage");
-            if (!window.location.pathname.includes("/login")) {
-              window.location.href = "/login";
+            if (!window.location.pathname.includes(ROUTES.LOGIN)) {
+              window.location.href = ROUTES.LOGIN;
             }
           }
         }
