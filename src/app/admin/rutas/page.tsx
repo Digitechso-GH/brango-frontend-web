@@ -117,21 +117,44 @@ export default function RutasPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Rutas</span>
-          <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{totalRoutes}</p>
+        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Rutas</p>
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-none">{totalRoutes}</h3>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-purple-50 dark:bg-purple-950/40 shrink-0">
+            <IconRoute className="text-purple-600 dark:text-purple-400" size={24} />
+          </div>
         </div>
-        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm">
-          <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">En Progreso</span>
-          <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{inProgressRoutes}</p>
+
+        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-1">En Progreso</p>
+            <h3 className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 leading-none">{inProgressRoutes}</h3>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 shrink-0">
+            <IconClock className="text-amber-600 dark:text-amber-400" size={24} />
+          </div>
         </div>
-        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pendientes</span>
-          <p className="text-2xl font-black text-slate-700 dark:text-slate-300 mt-1">{pendingRoutes}</p>
+
+        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Pendientes</p>
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-none">{pendingRoutes}</h3>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/40 shrink-0">
+            <IconBox className="text-blue-600 dark:text-blue-400" size={24} />
+          </div>
         </div>
-        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm">
-          <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Completadas</span>
-          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{completedRoutes}</p>
+
+        <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1">Completadas</p>
+            <h3 className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 leading-none">{completedRoutes}</h3>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 shrink-0">
+            <IconCheck className="text-emerald-600 dark:text-emerald-400" size={24} />
+          </div>
         </div>
       </div>
 
