@@ -59,6 +59,7 @@ export const useSavePedidoMutation = (orderId?: string, onClose?: () => void, se
       }
 
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders-today"] });
     },
     onError: (err: any) => {
       handleBackendErrors(err, setError, "Error al guardar el pedido");

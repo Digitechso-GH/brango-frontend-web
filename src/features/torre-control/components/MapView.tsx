@@ -51,7 +51,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
   const { data: drivers = [] } = useDriversQuery();
   const { data: ordersResponse } = usePedidosTodayQuery();
   const { data: sedesResponse } = useSedesQuery();
-  const allTodayOrders = ordersResponse?.data || [];
+  const allTodayOrders = Array.isArray(ordersResponse) ? ordersResponse : (ordersResponse?.data || []);
   const sedes = sedesResponse?.data || [];
   const { drawMultiStopRoute, clearRoute } = useMapRoute(googleMap);
 

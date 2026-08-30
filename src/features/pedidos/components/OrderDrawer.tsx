@@ -148,11 +148,7 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
   // Cargar sedes de origen dinámicamente
   const { data: sedes = [] } = useSedesQuery(isOpen);
 
-  // Cargar choferes para asignación opcional
-  const { data: drivers = [] } = useDriversQuery(isOpen);
-
   const selectedTipoDoc = watch("recipientDocumentType");
-  const selectedDriverId = watch("driverId");
 
   useEffect(() => {
     if (isOpen) {
@@ -219,23 +215,8 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
       recipientName: name,
     };
 
-    if (formData.driverId === "") {
-      payload.removeDriver = true;
-      delete payload.driverId;
-    } else if (formData.driverId) {
-      payload.driverId = formData.driverId;
-    }
-
     saveMutation.mutate(payload);
   };
-
-  const driverOptions = [
-    { label: "Sin asignar (Opcional)", value: "" },
-    ...drivers.map((d: any) => ({
-      label: `${d.name || "Sin nombre"} — ${d.unit || "Sin placa"}`,
-      value: d.id,
-    })),
-  ];
 
   return (
     <BaseDrawer
@@ -416,18 +397,6 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
             {errors.rawAddress?.message && (
               <p className="text-xs font-normal text-red-500 mt-0.5 ml-0.5">{errors.rawAddress.message?.toString()}</p>
             )}
-          </div>
-
-          {/* Asignar Chofer (Opcional) */}
-          <div className="flex flex-col gap-1 pt-1">
-            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 ml-0.5 select-none">
-              Asignar chofer <span className="text-slate-400 font-normal">(Opcional)</span>
-            </label>
-            <Select
-              value={selectedDriverId || ""}
-              onChange={(val) => setValue("driverId", val)}
-              options={driverOptions}
-            />
           </div>
         </div>
       </div>

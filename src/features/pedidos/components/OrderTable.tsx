@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { CleanTable } from "@/shared/components/ui/CleanTable";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
-import { Select } from "@/shared/components/ui/Select";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { 
   IconEye, 
@@ -27,8 +26,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-import { usePedidosQuery, useDriversQuery } from "../hooks/usePedidosQueries";
-import { useAssignDriverMutation, useStartRouteMutation } from "../hooks/usePedidosMutations";
+import { usePedidosQuery } from "../hooks/usePedidosQueries";
 import { getOrderStatusConfig } from "@/shared/utils/orderStatus.utils";
 import { ORDER_STATUS } from "@/shared/constants/order-status";
 
@@ -39,9 +37,6 @@ interface OrderTableProps {
 }
 
 export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps) => {
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-  const [selectedDriver, setSelectedDriver] = useState("");
-
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | undefined>();
 
@@ -66,14 +61,8 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
   const orders = ordersResponse?.data || [];
   const meta = ordersResponse?.meta || { total: 0, page: 1, limit: 20, totalPages: 1 };
 
-  const { data: drivers = [] } = useDriversQuery();
-
   // 2. Mutaciones
   const queryClient = useQueryClient();
-  const assignDriverMutation = useAssignDriverMutation(() => {
-    setRowSelection({});
-    setSelectedDriver("");
-  });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => pedidosApi.deleteOrder(id),
@@ -239,64 +228,8 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
     },
   ];
 
-  // Mapear choferes a opciones de Select
-  const driverOptions = [
-    { label: "Seleccionar chofer...", value: "" },
-    ...drivers.map((d: any) => ({
-      label: `${d.name || "Sin nombre"}${d.unit ? ` (${d.unit})` : ""}`,
-      value: d.id,
-    })),
-  ];
-
-  // Resolver IDs de pedidos seleccionados usando los índices de rowSelection
-  const selectedOrderIds = Object.keys(rowSelection)
-    .filter((k) => rowSelection[k])
-    .map((indexKey) => orders[parseInt(indexKey)]?.id)
-    .filter(Boolean);
-
-  const handleAssignDriver = () => {
-    if (selectedOrderIds.length > 0 && selectedDriver) {
-      assignDriverMutation.mutate({
-        orderIds: selectedOrderIds,
-        driverId: selectedDriver,
-      });
-    }
-  };
-
   return (
     <div className="flex flex-col gap-4">
-      {/* Barra de Asignación por Lote */}
-      {selectedOrderIds.length > 0 && (
-        <div className="bg-blue-50/70 dark:bg-blue-900/20 border border-blue-200/60 dark:border-blue-800/40 rounded-2xl p-3.5 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-2.5">
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-semibold">
-              {selectedOrderIds.length}
-            </span>
-            <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
-              Pedidos seleccionados para asignar
-            </span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-60">
-              <Select
-                options={driverOptions}
-                value={selectedDriver}
-                onChange={(val) => setSelectedDriver(val)}
-                variant="filter"
-              />
-            </div>
-            <Button
-              variant="primary"
-              size="sm"
-              disabled={!selectedDriver || assignDriverMutation.isPending}
-              onClick={handleAssignDriver}
-            >
-              {assignDriverMutation.isPending ? "Asignando..." : "Asignar Chofer"}
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Barra Superior: Buscador + Contador + Botones de Acción */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative w-full sm:w-80">
@@ -336,9 +269,6 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
         columns={columns}
         data={orders}
         isLoading={isLoading}
-        rowSelection={rowSelection}
-        onRowSelectionChange={setRowSelection}
-        enableRowSelection={(row) => row.original.status === ORDER_STATUS.PENDING}
         pagination={{
           page,
           totalPages: meta.totalPages,

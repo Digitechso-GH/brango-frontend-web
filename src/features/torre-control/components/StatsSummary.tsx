@@ -7,10 +7,10 @@ import { ORDER_STATUS } from "@/shared/constants/order-status";
 
 export const StatsSummary = () => {
   const { data: ordersResponse } = usePedidosTodayQuery();
-  const allTodayOrders = ordersResponse?.data || [];
-  const pendingCount = allTodayOrders.filter((o: any) => o.estado === ORDER_STATUS.PENDING).length;
-  const inTransitCount = allTodayOrders.filter((o: any) => o.estado === ORDER_STATUS.IN_TRANSIT).length;
-  const deliveredCount = allTodayOrders.filter((o: any) => o.estado === ORDER_STATUS.DELIVERED).length;
+  const allTodayOrders = Array.isArray(ordersResponse) ? ordersResponse : (ordersResponse?.data || []);
+  const pendingCount = allTodayOrders.filter((o: any) => o.status === ORDER_STATUS.PENDING).length;
+  const inTransitCount = allTodayOrders.filter((o: any) => o.status === ORDER_STATUS.IN_TRANSIT).length;
+  const deliveredCount = allTodayOrders.filter((o: any) => o.status === ORDER_STATUS.DELIVERED).length;
 
   const stats = [
     {
@@ -38,13 +38,13 @@ export const StatsSummary = () => {
       {stats.map((stat, i) => (
         <div
           key={i}
-          className="bg-white dark:bg-[#1A1A24] rounded-2xl p-5 border border-gray-100 dark:border-[#2D2D3D] flex items-center justify-between shadow-sm"
+          className="bg-white dark:bg-[#1A1A24] rounded-2xl p-5 border border-slate-100 dark:border-slate-800 flex items-center justify-between shadow-sm"
         >
           <div>
-            <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">
               {stat.title}
             </p>
-            <h3 className="text-3xl font-black text-gray-900 dark:text-white">{stat.value}</h3>
+            <h3 className="text-3xl font-bold text-slate-900 dark:text-white">{stat.value}</h3>
           </div>
           <div className={`p-4 rounded-xl ${stat.bg}`}>{stat.icon}</div>
         </div>
