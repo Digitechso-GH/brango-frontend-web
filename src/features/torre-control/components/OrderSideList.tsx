@@ -19,7 +19,7 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
   const [status, setStatus] = useState("all");
 
   const { data: ordersResponse, isLoading } = usePedidosTodayQuery();
-  const allTodayOrders = Array.isArray(ordersResponse) ? ordersResponse : (ordersResponse?.data || []);
+  const allTodayOrders = ordersResponse?.data || [];
   const { data: drivers = [] } = useDriversQuery();
 
   const driverOptions = [

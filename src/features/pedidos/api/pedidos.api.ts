@@ -19,16 +19,10 @@ const normalizeDriver = (raw: any) => {
 const normalizeOrder = (raw: any) => {
   if (!raw) return null;
 
-  // 1. Validar contratos recibidos desde el Backend
-  try {
-    OrderSchema.parse(raw);
-    if (raw.assignments) {
-      z.array(RouteAssignmentSchema).parse(raw.assignments);
-    }
-  } catch (err) {
-    if (process.env.NODE_ENV === "development") {
-      console.warn("normalizeOrder validation notice for order:", raw?.code, err);
-    }
+  // 1. Validar estrictamente los contratos recibidos desde el Backend
+  OrderSchema.parse(raw);
+  if (raw.assignments) {
+    z.array(RouteAssignmentSchema).parse(raw.assignments);
   }
 
   // Asignación activa: siempre ordenar explícitamente por createdAt desc para asegurar robustez

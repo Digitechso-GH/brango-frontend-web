@@ -33,7 +33,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   const availableDrivers = Array.isArray(driversResponse) ? driversResponse : [];
 
   const { data: ordersResponse } = usePedidosTodayQuery();
-  const allOrders = Array.isArray(ordersResponse) ? ordersResponse : (ordersResponse?.data || []);
+  const allOrders = ordersResponse?.data || [];
 
   const pendingOrders = allOrders.filter(
     (o: any) => o.status === ORDER_STATUS.PENDING && !o.routeAssignmentId && !o.driverId
