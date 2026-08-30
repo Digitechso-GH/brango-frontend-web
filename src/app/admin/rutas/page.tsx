@@ -78,9 +78,9 @@ export default function RutasPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-slate-50 dark:bg-[#0F0F17] p-6 lg:p-8 font-sans">
+    <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
@@ -116,7 +116,7 @@ export default function RutasPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Rutas</span>
           <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{totalRoutes}</p>
@@ -136,7 +136,7 @@ export default function RutasPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-3.5 shadow-sm mb-6 flex flex-wrap items-center gap-3">
+      <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-3.5 shadow-sm flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
           <IconFilter size={15} />
           <span>Filtros</span>
