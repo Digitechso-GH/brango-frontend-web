@@ -2,7 +2,16 @@
 
 import React, { useEffect, useState } from "react";
 import { useAvailableDriversQuery, usePedidosTodayQuery } from "@/features/pedidos/hooks/usePedidosQueries";
-import { IconMapPin, IconGripVertical, IconPlus, IconX, IconDeviceFloppy } from "@tabler/icons-react";
+import { 
+  IconMapPin, 
+  IconGripVertical, 
+  IconPlus, 
+  IconX, 
+  IconDeviceFloppy,
+  IconSteeringWheel,
+  IconCalendar
+} from "@tabler/icons-react";
+import { Select } from "@/shared/components/ui/Select";
 import { routesApi } from "../api/routes.api";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,13 +33,20 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   onReorder
 }) => {
   const queryClient = useQueryClient();
+  const todayStr = new Date().toISOString().split("T")[0];
+
   const [routeName, setRouteName] = useState("");
   const [driverId, setDriverId] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(todayStr);
   const [isSaving, setIsSaving] = useState(false);
 
   const { data: driversResponse } = useAvailableDriversQuery();
   const availableDrivers = Array.isArray(driversResponse) ? driversResponse : [];
+
+  const driverOptions = availableDrivers.map((d: any) => ({
+    label: `${d.name}${d.unit ? ` (${d.unit})` : ""}`,
+    value: d.id,
+  }));
 
   const { data: ordersResponse } = usePedidosTodayQuery();
   const allOrders = ordersResponse?.data || [];
@@ -76,8 +92,20 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   };
 
   const handleSaveRoute = async () => {
+    if (!routeName.trim()) {
+      toast.error("Debes ingresar el nombre de la ruta");
+      return;
+    }
+    if (!date) {
+      toast.error("Debes seleccionar una fecha");
+      return;
+    }
+    if (date < todayStr) {
+      toast.error("La fecha de la ruta no puede ser anterior a hoy");
+      return;
+    }
     if (!driverId) {
-      toast.error("Debes seleccionar un chofer");
+      toast.error("Debes seleccionar un chofer disponible");
       return;
     }
     if (selectedOrderIds.length === 0) {
@@ -88,7 +116,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
     try {
       setIsSaving(true);
       await routesApi.createRoute({
-        name: routeName || undefined,
+        name: routeName.trim(),
         driverId,
         date: new Date(date).toISOString(),
         assignments: selectedOrderIds.map(id => ({ orderId: id }))
@@ -96,10 +124,12 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
       toast.success("¡Ruta creada y asignada correctamente!");
       setRouteName("");
       setDriverId("");
+      setDate(todayStr);
       
       // Invalidar caché para que los pedidos desaparezcan de los "Pendientes"
       await queryClient.invalidateQueries({ queryKey: ["orders-today"] });
       await queryClient.invalidateQueries({ queryKey: ["available-drivers"] });
+      await queryClient.invalidateQueries({ queryKey: ["routes"] });
       
       if (onRouteSaved) onRouteSaved();
     } catch (error: any) {
@@ -109,61 +139,79 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
     }
   };
 
+  const isFormValid = routeName.trim().length > 0 && !!driverId && !!date && date >= todayStr && selectedOrderIds.length > 0;
+
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#1A1A24] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2D2D3D] overflow-hidden">
-      <div className="p-5 border-b border-gray-100 dark:border-[#2D2D3D] bg-gray-50/50 dark:bg-white/5">
-        <h2 className="text-lg font-black text-gray-900 dark:text-white mb-4">Armar Nueva Ruta</h2>
+    <div className="flex flex-col h-full bg-white dark:bg-[#1A1A24] rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800/80 overflow-hidden">
+      <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-white/5">
+        <h2 className="text-lg font-black text-slate-900 dark:text-white mb-4">Armar Nueva Ruta</h2>
         
-        <div className="space-y-4">
+        <div className="space-y-3.5">
+          {/* Nombre de la ruta (Obligatorio) */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Nombre de la Ruta (Opcional)</label>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Nombre de la Ruta <span className="text-rose-500">*</span>
+            </label>
             <input 
               type="text" 
               value={routeName}
               onChange={e => setRouteName(e.target.value)}
-              placeholder="Ej. Ruta Norte Mañana"
-              className="w-full bg-white dark:bg-[#13131A] border border-gray-200 dark:border-[#2D2D3D] rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="Ej. Ruta Norte - Mañana"
+              className="w-full bg-white dark:bg-[#13131A] border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Fecha (Obligatorio, min = hoy) */}
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Fecha</label>
-              <input 
-                type="date" 
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                className="w-full bg-white dark:bg-[#13131A] border border-gray-200 dark:border-[#2D2D3D] rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Fecha <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <input 
+                  type="date" 
+                  value={date}
+                  min={todayStr}
+                  onChange={e => setDate(e.target.value)}
+                  className="w-full bg-white dark:bg-[#13131A] border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none cursor-pointer transition-all"
+                />
+              </div>
             </div>
+
+            {/* Chofer Disponible (Obligatorio, Selector Estilizado Global) */}
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Chofer Disponible</label>
-              <select 
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Chofer Disponible <span className="text-rose-500">*</span>
+              </label>
+              <Select
                 value={driverId}
-                onChange={e => setDriverId(e.target.value)}
-                className="w-full bg-white dark:bg-[#13131A] border border-gray-200 dark:border-[#2D2D3D] rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="">Seleccione...</option>
-                {availableDrivers.map((d: any) => (
-                  <option key={d.id} value={d.id}>{d.name} {d.unit ? `(${d.unit})` : ''}</option>
-                ))}
-              </select>
+                onChange={setDriverId}
+                options={driverOptions}
+                placeholder="Seleccionar chofer..."
+                icon={<IconSteeringWheel size={16} className="text-slate-400" />}
+                className="w-full"
+              />
             </div>
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-5 flex flex-col gap-6">
+        {/* Paradas en la Ruta */}
         <div>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center justify-between">
             <span>Paradas en la Ruta</span>
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{selectedOrderIds.length}</span>
+            <span className="text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800/40">
+              {selectedOrderIds.length} {selectedOrderIds.length === 1 ? "pedido" : "pedidos"}
+            </span>
           </h3>
           
           {selectedOrdersData.length === 0 ? (
-            <div className="text-center p-6 border-2 border-dashed border-gray-200 dark:border-[#2D2D3D] rounded-xl">
-              <IconMapPin className="mx-auto text-gray-300 mb-2" />
-              <p className="text-xs text-gray-500">Haz clic en los marcadores rojos del mapa o añádelos desde la lista de pendientes.</p>
+            <div className="text-center p-6 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02]">
+              <IconMapPin className="mx-auto text-slate-300 dark:text-slate-600 mb-2" size={24} />
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Haz clic en los marcadores rojos del mapa o agrégalos desde la lista de pendientes abajo.
+              </p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -174,19 +222,29 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
                   onDragStart={(e) => handleDragStart(e, idx)}
                   onDragOver={(e) => handleDragOver(e, idx)}
                   onDrop={handleDrop}
-                  className={`flex items-center gap-3 p-3 bg-white dark:bg-[#1A1A24] border border-gray-200 dark:border-[#2D2D3D] rounded-xl shadow-sm transition-all ${draggedIdx === idx ? 'opacity-50' : 'cursor-grab active:cursor-grabbing'}`}
+                  className={`flex items-center gap-3 p-3 bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-xs transition-all ${
+                    draggedIdx === idx ? "opacity-40 scale-[0.98]" : "cursor-grab active:cursor-grabbing hover:border-slate-300 dark:hover:border-slate-700"
+                  }`}
                 >
-                  <div className="text-gray-400">
+                  <div className="text-slate-400 dark:text-slate-500 shrink-0">
                     <IconGripVertical size={16} />
                   </div>
-                  <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm shadow-blue-500/20">
                     {idx + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{order.code}</p>
-                    <p className="text-xs text-gray-500 truncate">{order.recipientName || order.customer?.name}</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      #{order.code}
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      {order.recipientName || order.customer?.name || "Cliente"}
+                    </p>
                   </div>
-                  <button onClick={() => onRemoveOrder(order.id)} className="text-gray-400 hover:text-red-500">
+                  <button 
+                    onClick={() => onRemoveOrder(order.id)} 
+                    className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    title="Quitar parada"
+                  >
                     <IconX size={16} />
                   </button>
                 </div>
@@ -195,38 +253,48 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
           )}
         </div>
 
+        {/* Pendientes sin Ruta */}
         <div>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Pendientes sin Ruta</h3>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Pendientes sin Ruta</h3>
           <div className="space-y-2">
             {pendingOrders.filter((o: any) => !selectedOrderIds.includes(o.id)).map((order: any) => (
-              <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-[#2D2D3D] rounded-xl">
+              <div 
+                key={order.id} 
+                className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-slate-800/80 rounded-xl hover:border-slate-200 dark:hover:border-slate-700 transition-colors"
+              >
                 <div className="flex-1 min-w-0 pr-3">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{order.code}</p>
-                  <p className="text-xs text-gray-500 truncate">{order.formattedAddress}</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    #{order.code}
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    {order.formattedAddress || order.rawAddress || "Dirección no disponible"}
+                  </p>
                 </div>
                 <button 
                   onClick={() => onSelectOrder(order.id)}
-                  className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                  className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
+                  title="Agregar a la ruta"
                 >
                   <IconPlus size={16} />
                 </button>
               </div>
             ))}
             {pendingOrders.filter((o: any) => !selectedOrderIds.includes(o.id)).length === 0 && (
-              <p className="text-xs text-gray-500 text-center py-4">No hay más pedidos pendientes.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-4">No hay más pedidos pendientes.</p>
             )}
           </div>
         </div>
       </div>
 
-      <div className="p-4 border-t border-gray-100 dark:border-[#2D2D3D] bg-white dark:bg-[#1A1A24]">
+      {/* Footer / Botón Guardar */}
+      <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-[#1A1A24]">
         <button
           onClick={handleSaveRoute}
-          disabled={isSaving || selectedOrderIds.length === 0 || !driverId}
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-500/30 transition-all"
+          disabled={isSaving || !isFormValid}
+          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all cursor-pointer text-sm"
         >
-          <IconDeviceFloppy size={20} />
-          {isSaving ? "Guardando..." : "Guardar Ruta"}
+          <IconDeviceFloppy size={18} />
+          <span>{isSaving ? "Guardando..." : "Guardar Ruta"}</span>
         </button>
       </div>
     </div>
