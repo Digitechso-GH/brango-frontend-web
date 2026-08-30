@@ -58,8 +58,8 @@ export const StatsSummary = () => {
       title: "Pedidos sin Ruta",
       value: `${unassignedOrders}`,
       subtext: "Por asignar en mapa",
-      icon: <IconMapPin className="text-amber-600 dark:text-amber-400" size={24} />,
-      bg: "bg-amber-50 dark:bg-amber-950/40",
+      icon: <IconMapPin className="text-slate-600 dark:text-slate-400" size={24} />,
+      bg: "bg-slate-100 dark:bg-slate-800/80",
     },
   ];
 

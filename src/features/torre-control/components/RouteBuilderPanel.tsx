@@ -126,10 +126,13 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
       setDriverId("");
       setDate(todayStr);
       
-      // Invalidar caché para que los pedidos desaparezcan de los "Pendientes"
-      await queryClient.invalidateQueries({ queryKey: ["orders-today"] });
-      await queryClient.invalidateQueries({ queryKey: ["available-drivers"] });
-      await queryClient.invalidateQueries({ queryKey: ["routes"] });
+      // Invalidar caché para actualizar cartillas y listas de inmediato sin recargar la página
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders-today"] }),
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["available-drivers"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-routes"] }),
+      ]);
       
       if (onRouteSaved) onRouteSaved();
     } catch (error: any) {
