@@ -1,25 +1,30 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { PUBLIC_ROUTES, ROUTE_ACCESS, ROUTES, UserRole } from "@/shared/constants/routes";
-import { jwtVerify } from "jose";
+import { decodeJwt } from "jose";
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("auth_token")?.value;
 
-  const secret = new TextEncoder().encode(
-    process.env.JWT_SECRET || "super_secret_key_change_me_in_production"
-  );
+  // Decodificar y validar estructura y vigencia del token
+  const getValidPayload = (jwtToken: string) => {
+    try {
+      const payload = decodeJwt(jwtToken);
+      if (!payload || !payload.exp) return null;
+      if (Date.now() >= payload.exp * 1000) return null;
+      return payload;
+    } catch {
+      return null;
+    }
+  };
+
+  const payload = token ? getValidPayload(token) : null;
 
   // 1. Manejo de la raíz /
   if (pathname === "/") {
-    if (token) {
-      try {
-        await jwtVerify(token, secret);
-        return NextResponse.redirect(new URL(ROUTES.ADMIN.TORRE_CONTROL, request.url));
-      } catch {
-        return NextResponse.redirect(new URL(ROUTES.LOGIN, request.url));
-      }
+    if (payload) {
+      return NextResponse.redirect(new URL(ROUTES.ADMIN.TORRE_CONTROL, request.url));
     }
     return NextResponse.redirect(new URL(ROUTES.LOGIN, request.url));
   }
@@ -27,6 +32,9 @@ export async function middleware(request: NextRequest) {
   // 2. Rutas Públicas (ej: /login, /seguimiento/[code])
   const isPublic = PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(p + "/"));
   if (isPublic) {
+    if (pathname === ROUTES.LOGIN && payload) {
+      return NextResponse.redirect(new URL(ROUTES.ADMIN.TORRE_CONTROL, request.url));
+    }
     return NextResponse.next();
   }
 
@@ -36,24 +44,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(ROUTES.LOGIN, request.url));
   }
 
-  // 4. Validar presencia de token y verificar firma criptográfica
-  if (!token) {
+  // 4. Validar presencia de token y vigencia
+  if (!payload) {
     return NextResponse.redirect(new URL(ROUTES.LOGIN, request.url));
   }
 
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    const userRole = payload.role as UserRole | undefined;
-
-    if (!userRole || !allowedRoles.includes(userRole)) {
-      return NextResponse.redirect(new URL(ROUTES.LOGIN, request.url));
-    }
-
-    return NextResponse.next();
-  } catch {
-    // Si la firma es inválida, forjada o expirada, expulsar inmediatamente a login
+  // 5. Validar autorización por rol
+  const userRole = payload.role as UserRole | undefined;
+  if (!userRole || !allowedRoles.includes(userRole)) {
     return NextResponse.redirect(new URL(ROUTES.LOGIN, request.url));
   }
+
+  return NextResponse.next();
 }
 
 export const config = {
