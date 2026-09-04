@@ -103,3 +103,48 @@ export const useStartRouteMutation = () => {
     },
   });
 };
+
+export const useGroupStopsMutation = (onSuccessCallback?: () => void) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (assignmentIds: string[]) => {
+      return pedidosApi.groupStops(assignmentIds);
+    },
+    onSuccess: (data) => {
+      toast.success(`Parada consolidada exitosamente (${data.count || 2} pedidos unidos)`);
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders-today"] });
+      queryClient.invalidateQueries({ queryKey: ["duplicate-suggestions"] });
+      queryClient.invalidateQueries({ queryKey: ["rutas"] });
+      if (onSuccessCallback) onSuccessCallback();
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || "Error al consolidar la parada";
+      toast.error(msg);
+    },
+  });
+};
+
+export const useUngroupStopMutation = (onSuccessCallback?: () => void) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (assignmentId: string) => {
+      return pedidosApi.ungroupStop(assignmentId);
+    },
+    onSuccess: () => {
+      toast.success("Pedido desagrupado de la parada exitosamente");
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders-today"] });
+      queryClient.invalidateQueries({ queryKey: ["duplicate-suggestions"] });
+      queryClient.invalidateQueries({ queryKey: ["rutas"] });
+      queryClient.invalidateQueries({ queryKey: ["order"] });
+      if (onSuccessCallback) onSuccessCallback();
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || "Error al desagrupar el pedido";
+      toast.error(msg);
+    },
+  });
+};

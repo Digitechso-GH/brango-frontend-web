@@ -17,6 +17,8 @@ import {
 import { ORDER_STATUS_DETAILS } from "@/shared/constants/order-status";
 import { ROUTES } from "@/shared/constants/routes";
 import { Select } from "@/shared/components/ui/Select";
+import { BaseDrawer } from "@/shared/components/ui/BaseDrawer";
+import { Button } from "@/shared/components/ui/Button";
 import { 
   IconRoute, 
   IconPlus, 
@@ -32,8 +34,10 @@ import {
   IconClock, 
   IconCheck, 
   IconAlertCircle,
-  IconChevronRight
+  IconChevronRight,
+  IconLink
 } from "@tabler/icons-react";
+import { formatLocalDate } from "@/shared/utils/date";
 
 export default function RutasPage() {
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -276,12 +280,7 @@ export default function RutasPage() {
                       </td>
 
                       <td className="py-4 px-6 text-center text-slate-600 dark:text-slate-300">
-                        {new Date(route.date).toLocaleDateString("es-PE", {
-                          timeZone: "UTC",
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {formatLocalDate(route.date)}
                       </td>
 
                       <td className="py-4 px-6 text-center">
@@ -304,23 +303,25 @@ export default function RutasPage() {
                       </td>
 
                       <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1.5 w-20 mx-auto">
                           <button
                             onClick={() => setSelectedRouteId(route.id)}
-                            className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                            className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                             title="Ver paradas de la ruta"
                           >
                             <IconEye size={18} />
                           </button>
 
-                          {isDeletable && (
+                          {isDeletable ? (
                             <button
                               onClick={() => handleDeleteRoute(route.id, route.name)}
-                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
+                              className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
                               title="Eliminar ruta"
                             >
                               <IconTrash size={18} />
                             </button>
+                          ) : (
+                            <div className="w-8 h-8" />
                           )}
                         </div>
                       </td>
@@ -334,120 +335,97 @@ export default function RutasPage() {
       </div>
 
       {/* Route Stops Detail Drawer */}
-      {selectedRouteId && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          {/* Overlay oscuro sin blur para máximo rendimiento */}
-          <div
-            className="fixed inset-0 bg-gray-900/50 transition-opacity"
-            onClick={() => setSelectedRouteId(null)}
-          />
-
-          {/* Panel Lateral */}
-          <div className="relative w-full max-w-xl bg-white dark:bg-[#1A1A24] h-full shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800 z-10 animate-in slide-in-from-right duration-300">
-            {/* Drawer Header */}
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between">
-              <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Detalle de Ruta</span>
-                <h2 className="text-xl font-black text-slate-900 dark:text-white mt-0.5">
-                  {routeDetail?.name || `Ruta #${routeDetail?.sequenceIndex || ""}`}
-                </h2>
-                {routeDetail && (
-                  <p className="text-xs text-slate-500 mt-1">
-                    Chofer: <b>{routeDetail.driver?.user?.name}</b> {routeDetail.driver?.unit ? `(Unidad: ${routeDetail.driver.unit})` : ""}
-                  </p>
-                )}
-              </div>
-
-              <button
-                onClick={() => setSelectedRouteId(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <IconX size={20} />
-              </button>
-            </div>
-
-            {/* Drawer Body: Stops Timeline */}
-            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
-              {isLoadingDetail ? (
-                <div className="flex-1 flex flex-col items-center justify-center p-12 gap-3">
-                  <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-xs font-medium text-slate-400">Cargando paradas...</p>
-                </div>
-              ) : !routeDetail?.assignments || routeDetail.assignments.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-3">
-                    <IconBox size={24} />
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">Ruta sin pedidos asignados</h4>
-                  <p className="text-xs text-slate-500 mt-1 max-w-xs">
-                    Esta ruta fue creada vacía y está lista para recibir paradas desde la Torre de Control.
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                    Secuencia de Entregas ({routeDetail.assignments.length} paradas)
-                  </span>
-
-                  {routeDetail.assignments.map((assignment, index) => {
-                    const statusConf = ORDER_STATUS_DETAILS[assignment.status] || ORDER_STATUS_DETAILS.PENDING;
-
-                    return (
-                      <div
-                        key={assignment.id}
-                        className="bg-slate-50/80 dark:bg-[#13131A] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 flex items-start gap-3.5 shadow-xs"
-                      >
-                        {/* Stop Number Circle */}
-                        <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black shrink-0 mt-0.5 shadow-md shadow-blue-500/20">
-                          {assignment.sequenceIndex || index + 1}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <span className="text-xs font-black text-slate-900 dark:text-white">
-                              #{assignment.order.code}
-                            </span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusConf.badgeBg} ${statusConf.badgeText}`}>
-                              {statusConf.label}
-                            </span>
-                          </div>
-
-                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                            {assignment.order.recipientName || "Cliente"}
-                          </p>
-
-                          <div className="flex items-start gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            <IconMapPin size={14} className="shrink-0 mt-0.5 text-slate-400" />
-                            <span className="line-clamp-2 leading-relaxed">
-                              {assignment.order.formattedAddress || assignment.order.rawAddress}
-                            </span>
-                          </div>
-
-                          {assignment.order.waybill && (
-                            <span className="inline-block text-[11px] font-medium text-slate-400 mt-1.5">
-                              Guía: {assignment.order.waybill}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Drawer Footer */}
-            <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-              <button
-                onClick={() => setSelectedRouteId(null)}
-                className="px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
-              >
-                Cerrar
-              </button>
-            </div>
+      <BaseDrawer
+        isOpen={!!selectedRouteId}
+        onClose={() => setSelectedRouteId(null)}
+        title={routeDetail?.name || (routeDetail?.sequenceIndex ? `Ruta #${routeDetail.sequenceIndex}` : "Detalle de Ruta")}
+        subtitle={routeDetail?.driver?.user?.name ? `Chofer: ${routeDetail.driver.user.name}${routeDetail.driver.unit ? ` (${routeDetail.driver.unit})` : ""}` : undefined}
+        footer={
+          <div className="flex justify-end w-full">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedRouteId(null)}
+            >
+              Cerrar
+            </Button>
           </div>
-        </div>
-      )}
+        }
+      >
+        {isLoadingDetail ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-medium text-slate-400">Cargando paradas...</p>
+          </div>
+        ) : !routeDetail?.assignments || routeDetail.assignments.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-3">
+              <IconBox size={24} />
+            </div>
+            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">Ruta sin pedidos asignados</h4>
+            <p className="text-xs text-slate-500 mt-1 max-w-xs">
+              Esta ruta fue creada vacía y está lista para recibir paradas desde la Torre de Control.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Secuencia de Entregas ({routeDetail.assignments.length} {routeDetail.assignments.length === 1 ? "parada" : "paradas"})
+            </span>
+
+            {routeDetail.assignments.map((assignment, index) => {
+              const statusConf = ORDER_STATUS_DETAILS[assignment.status] || ORDER_STATUS_DETAILS.PENDING;
+
+              return (
+                <div
+                  key={assignment.id}
+                  className="bg-slate-50/80 dark:bg-[#13131A] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 flex items-start gap-3.5 shadow-xs"
+                >
+                  {/* Stop Number Circle */}
+                  <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black shrink-0 mt-0.5 shadow-md shadow-blue-500/20">
+                    {assignment.sequenceIndex || index + 1}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900 dark:text-white">
+                          #{assignment.order.code}
+                        </span>
+                        {(assignment as any).stopGroupId && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200/60 dark:border-indigo-800/60">
+                            <IconLink size={10} /> Parada compartida
+                          </span>
+                        )}
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusConf.badgeBg} ${statusConf.badgeText}`}>
+                        {statusConf.label}
+                      </span>
+                    </div>
+
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      {assignment.order.recipientName || "Cliente"}
+                    </p>
+
+                    <div className="flex items-start gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      <IconMapPin size={14} className="shrink-0 mt-0.5 text-slate-400" />
+                      <span className="line-clamp-2 leading-relaxed">
+                        {assignment.order.formattedAddress || assignment.order.rawAddress}
+                      </span>
+                    </div>
+
+                    {assignment.order.waybill && (
+                      <span className="inline-block text-[11px] font-medium text-slate-400 mt-1.5">
+                        Guía: {assignment.order.waybill}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </BaseDrawer>
     </div>
   );
 }

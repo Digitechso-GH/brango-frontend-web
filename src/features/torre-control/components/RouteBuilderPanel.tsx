@@ -16,6 +16,7 @@ import { routesApi } from "../api/routes.api";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { ORDER_STATUS } from "@/shared/constants/order-status";
+import { getLocalTodayString } from "@/shared/utils/date";
 
 interface RouteBuilderPanelProps {
   onRouteSaved?: () => void;
@@ -33,14 +34,14 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   onReorder
 }) => {
   const queryClient = useQueryClient();
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getLocalTodayString();
 
   const [routeName, setRouteName] = useState("");
   const [driverId, setDriverId] = useState("");
   const [date, setDate] = useState(todayStr);
   const [isSaving, setIsSaving] = useState(false);
 
-  const { data: driversResponse } = useAvailableDriversQuery();
+  const { data: driversResponse } = useAvailableDriversQuery(date);
   const availableDrivers = Array.isArray(driversResponse) ? driversResponse : [];
 
   const driverOptions = availableDrivers.map((d: any) => ({
@@ -118,7 +119,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
       await routesApi.createRoute({
         name: routeName.trim(),
         driverId,
-        date: new Date(date).toISOString(),
+        date: date,
         assignments: selectedOrderIds.map(id => ({ orderId: id }))
       });
       toast.success("¡Ruta creada y asignada correctamente!");

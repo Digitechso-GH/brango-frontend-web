@@ -14,12 +14,16 @@ import {
   IconInfoCircle,
   IconChevronDown,
   IconCheck,
-  IconTrash
+  IconTrash,
+  IconLink,
+  IconUnlink
 } from "@tabler/icons-react";
 import { GPSBrand } from "@/shared/components/ui/GPSBrand";
 import { Select } from "@/shared/components/ui/Select";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useUngroupStopMutation } from "../hooks/usePedidosMutations";
 import { toast } from "sonner";
+import { getLocalTodayString, formatLocalDate, formatLocalTime } from "@/shared/utils/date";
 
 interface OrderDetailDrawerProps {
   isOpen: boolean;
@@ -30,14 +34,12 @@ interface OrderDetailDrawerProps {
 export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawerProps) => {
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState("");
   
   // Format today's date to YYYY-MM-DD in local time
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toLocaleDateString('en-CA'); // 'en-CA' always returns YYYY-MM-DD
-  });
+  const [selectedDate, setSelectedDate] = useState(() => getLocalTodayString());
 
   const queryClient = useQueryClient();
 
@@ -91,6 +93,10 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
     onError: (error: any) => {
       toast.error("Error al eliminar: " + (error.response?.data?.message || error.message));
     }
+  });
+
+  const ungroupMutation = useUngroupStopMutation(() => {
+    queryClient.invalidateQueries({ queryKey: ["order", orderId] });
   });
 
   React.useEffect(() => {
@@ -194,7 +200,7 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
           label = "Observado";
           color = "red";
         } else if (ev.type === "REASSIGNED") {
-          const dateStr = new Date(ev.timestamp).toLocaleDateString("es-PE", { day: 'numeric', month: 'long' });
+          const dateStr = formatLocalDate(ev.timestamp, { format: "long", includeYear: false });
           const actorStr = ev.actor ? `POR ${ev.actor}` : "POR SISTEMA";
           events.push({
             id: ev.id,
@@ -248,20 +254,63 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
             {getStatusBadge(order.status)}
           </div>
 
+          {/* Parada Compartida */}
+          {order.stopGroupId && (
+            <div className="bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 rounded-2xl p-3.5 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300">
+                  <IconLink size={15} />
+                  <span>Parada Compartida</span>
+                </div>
+                {order.status === ORDER_STATUS.PENDING && order.routeAssignmentId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={ungroupMutation.isPending}
+                    onClick={() => {
+                      if (window.confirm("¿Deseas separar este pedido de la parada compartida? Volverá a ser una parada individual.")) {
+                        ungroupMutation.mutate(order.routeAssignmentId);
+                      }
+                    }}
+                    className="text-[11px] py-1 px-2.5 rounded-lg border-indigo-200 dark:border-indigo-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  >
+                    <IconUnlink size={13} />
+                    <span>{ungroupMutation.isPending ? "Separando..." : "Separar parada"}</span>
+                  </Button>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                Este pedido comparte ubicación con otra entrega asignada a la misma unidad. Se entregarán en conjunto en una sola parada de la ruta.
+              </p>
+            </div>
+          )}
+
           {/* 2. Imagen de Evidencia / ePOD */}
-          <div className="w-full h-52 bg-slate-50 dark:bg-[#13131A] rounded-2xl border border-gray-200/80 dark:border-[#2D2D3D] flex flex-col items-center justify-center relative overflow-hidden p-3 shadow-sm">
+          <div
+            onClick={() => showImage && setIsImageModalOpen(true)}
+            className={`w-full h-56 bg-slate-100 dark:bg-[#1A1A24] rounded-2xl border border-slate-200/90 dark:border-[#2D2D3D] flex flex-col items-center justify-center relative overflow-hidden p-2 shadow-sm ${
+              showImage ? "cursor-pointer group hover:border-blue-500/50 transition-all" : ""
+            }`}
+          >
             {showImage ? (
               <>
                 {!imgLoaded && (
-                  <div className="absolute inset-0 m-3 bg-gray-200 dark:bg-[#2D2D3D] animate-pulse rounded-lg" />
+                  <div className="absolute inset-0 m-2 bg-slate-200 dark:bg-[#2D2D3D] animate-pulse rounded-lg" />
                 )}
                 <img
                   src={evidenceImage}
                   onLoad={() => setImgLoaded(true)}
                   onError={() => setImgError(true)}
                   alt="Evidencia / ePOD"
-                  className={`w-full h-full object-cover rounded-lg transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+                  className={`max-w-full max-h-full w-auto h-auto object-contain rounded-md shadow-sm border border-slate-200/80 dark:border-slate-700/80 transition-opacity duration-300 ${
+                    imgLoaded ? "opacity-100" : "opacity-0"
+                  }`}
                 />
+                <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-2xl">
+                  <span className="bg-white text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg shadow-md border border-slate-200/80 flex items-center gap-1.5">
+                    🔍 Ampliar imagen
+                  </span>
+                </div>
               </>
             ) : (
               <div className="flex flex-col items-center justify-center gap-2.5 text-gray-400 dark:text-gray-500 p-4">
@@ -366,7 +415,7 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
                         {timeline.label}
                       </span>
                       <span className="text-[11px] font-normal text-slate-400 dark:text-slate-500 mt-0.5 flex gap-1">
-                        <span>{new Date(timeline.date).toLocaleTimeString("es-PE", { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                        <span>{formatLocalTime(timeline.date)}</span>
                         {timeline.subLabel && <span>· {timeline.subLabel}</span>}
                       </span>
                     </div>
@@ -463,6 +512,45 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Lightbox / Modal para ver la imagen completa */}
+      {isImageModalOpen && showImage && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setIsImageModalOpen(false)}
+        >
+          <div className="absolute top-4 right-4 flex items-center gap-3">
+            <a
+              href={evidenceImage}
+              target="_blank"
+              rel="noopener noreferrer"
+              download="guia-remision.jpg"
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white/10 hover:bg-white/20 text-white text-xs font-medium px-3.5 py-2 rounded-xl border border-white/20 transition-all flex items-center gap-1.5"
+            >
+              Abrir original ↗
+            </a>
+            <button
+              type="button"
+              onClick={() => setIsImageModalOpen(false)}
+              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-lg font-bold border border-white/20 transition-all"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div
+            className="max-w-4xl max-h-[85vh] w-full flex items-center justify-center p-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={evidenceImage}
+              alt="Guía de Remisión Completa"
+              className="max-w-full max-h-[82vh] w-auto h-auto object-contain rounded-lg shadow-2xl border border-white/10"
+            />
+          </div>
         </div>
       )}
     </BaseDrawer>

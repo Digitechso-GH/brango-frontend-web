@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { trackingApi, PublicTrackingData } from "@/features/tracking/api/tracking.api";
 import { ORDER_STATUS_DETAILS } from "@/shared/constants/order-status";
 import { loadGoogleMapsLibrary } from "@/shared/integrations/google/google-maps.loader";
@@ -23,7 +23,21 @@ import {
 
 export default function PublicTrackingPage() {
   const params = useParams();
-  const code = params?.code as string;
+  const router = useRouter();
+  
+  let code = params?.code as string;
+  if (code) {
+    // Next.js a veces ya lo decodifica, pero por si acaso manejamos la versión URL-encoded también
+    code = decodeURIComponent(code);
+    
+    // TODO: Parche temporal porque la plantilla de Meta agrega {{1}} a la URL.
+    // Esto se borrará una vez que Meta apruebe la nueva plantilla corregida.
+    if (code.startsWith("{{1}}")) {
+      code = code.replace("{{1}}", "");
+      // Reemplazamos la URL en el navegador para que quede limpia
+      router.replace(`/seguimiento/${code}`);
+    }
+  }
 
   const [order, setOrder] = useState<PublicTrackingData | null>(null);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);

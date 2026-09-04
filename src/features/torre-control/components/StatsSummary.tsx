@@ -11,9 +11,10 @@ import {
 } from "@tabler/icons-react";
 import { ORDER_STATUS } from "@/shared/constants/order-status";
 import { ROUTE_STATUS } from "@/shared/constants/route-status";
+import { getLocalTodayString } from "@/shared/utils/date";
 
 export const StatsSummary = () => {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getLocalTodayString();
 
   // Queries
   const { data: routesResponse } = useRoutesQuery({ date: todayStr });

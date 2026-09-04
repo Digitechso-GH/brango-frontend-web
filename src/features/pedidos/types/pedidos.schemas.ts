@@ -36,6 +36,7 @@ export const RouteAssignmentSchema = z.object({
   originLatitude: z.number().nullable().optional(),
   originLongitude: z.number().nullable().optional(),
   originAddress: z.string().nullable().optional(),
+  stopGroupId: z.string().nullable().optional(),
   createdAt: z.string().or(z.date()),
   updatedAt: z.string().or(z.date()),
 });

@@ -31,7 +31,7 @@ export const authApi = {
         id: rawUser.id,
         name: rawUser.name || "",
         email: rawUser.email,
-        role: rawUser.role || rawUser.rol || "",
+        role: rawUser.role || "",
         driverId: rawUser.driverId,
         unit: rawUser.unit,
       }

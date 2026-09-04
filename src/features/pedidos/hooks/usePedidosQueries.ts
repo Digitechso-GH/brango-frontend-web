@@ -23,10 +23,10 @@ export const useDriversQuery = (enabled: boolean = true) => {
   });
 };
 
-export const useAvailableDriversQuery = (enabled: boolean = true) => {
+export const useAvailableDriversQuery = (date?: string, enabled: boolean = true) => {
   return useQuery({
-    queryKey: ["available-drivers"],
-    queryFn: pedidosApi.getAvailableDrivers,
+    queryKey: ["available-drivers", date],
+    queryFn: () => pedidosApi.getAvailableDrivers(date),
     enabled,
   });
 };
@@ -35,6 +35,14 @@ export const useSedesQuery = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["sedes"],
     queryFn: pedidosApi.getSedes,
+    enabled,
+  });
+};
+
+export const useDuplicateSuggestionsQuery = (date?: string, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["duplicate-suggestions", date],
+    queryFn: () => pedidosApi.getDuplicateSuggestions(date),
     enabled,
   });
 };

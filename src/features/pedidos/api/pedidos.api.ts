@@ -58,6 +58,7 @@ const normalizeOrder = (raw: any) => {
     longitude: raw.longitude !== null && raw.longitude !== undefined ? Number(raw.longitude) : null,
     originLatitude: activeAssignment?.originLatitude !== null && activeAssignment?.originLatitude !== undefined ? Number(activeAssignment.originLatitude) : null,
     originLongitude: activeAssignment?.originLongitude !== null && activeAssignment?.originLongitude !== undefined ? Number(activeAssignment.originLongitude) : null,
+    stopGroupId: activeAssignment?.stopGroupId || null,
   };
 };
 
@@ -111,8 +112,9 @@ export const pedidosApi = {
     return Array.isArray(rawData) ? rawData.map(normalizeDriver) : [];
   },
 
-  getAvailableDrivers: async () => {
-    const res = await api.get(`${API_ENDPOINTS.DRIVERS}/available`);
+  getAvailableDrivers: async (date?: string) => {
+    const params = date ? { date } : {};
+    const res = await api.get(`${API_ENDPOINTS.DRIVERS}/available`, { params });
     const rawData = res.data.data ?? res.data ?? [];
     return Array.isArray(rawData) ? rawData.map(normalizeDriver) : [];
   },
@@ -169,6 +171,27 @@ export const pedidosApi = {
 
   deleteOrder: async (id: string) => {
     const res = await api.delete(`${API_ENDPOINTS.ORDERS}/${id}`);
+    return res.data.data ?? res.data;
+  },
+
+  getDuplicateSuggestions: async (date?: string) => {
+    const params = date ? { date } : {};
+    const res = await api.get(`${API_ENDPOINTS.ORDERS}/duplicates-suggestions`, { params });
+    return res.data.data ?? res.data ?? [];
+  },
+
+  groupStops: async (assignmentIds: string[]) => {
+    const res = await api.post(`${API_ENDPOINTS.ORDERS}/group-stops`, { assignmentIds });
+    return res.data.data ?? res.data;
+  },
+
+  ungroupStop: async (assignmentId: string) => {
+    const res = await api.post(`${API_ENDPOINTS.ORDERS}/ungroup-stop`, { assignmentId });
+    return res.data.data ?? res.data;
+  },
+
+  addGroupEvidence: async (payload: { assignmentIds: string[]; s3Url: string; signatureText?: string }) => {
+    const res = await api.post(`${API_ENDPOINTS.ORDERS}/group-evidence`, payload);
     return res.data.data ?? res.data;
   },
 };

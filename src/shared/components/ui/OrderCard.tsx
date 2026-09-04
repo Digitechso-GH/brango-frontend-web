@@ -5,6 +5,7 @@ import { Badge } from "@/shared/components/ui/Badge";
 import { GPSBrand } from "@/shared/components/ui/GPSBrand";
 import { ORDER_STATUS } from "@/shared/constants/order-status";
 import { getOrderStatusConfig } from "@/shared/utils/orderStatus.utils";
+import { formatLocalTime } from "@/shared/utils/date";
 
 interface OrderCardProps {
   order: any;
@@ -55,13 +56,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     : "Sin asignar";
 
   const getTimeString = () => {
-    const targetDate = order.updatedAt || order.createdAt;
-    if (!targetDate) return "";
-    const d = new Date(targetDate);
-    if (isNaN(d.getTime())) return "";
-    const hh = d.getHours().toString().padStart(2, "0");
-    const mm = d.getMinutes().toString().padStart(2, "0");
-    return `${hh}:${mm}`;
+    return formatLocalTime(order.updatedAt || order.createdAt);
   };
 
   return (

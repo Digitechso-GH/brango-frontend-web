@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
 
   try {
     const { payload } = await jwtVerify(token, secret);
-    const userRole = (payload.rol || payload.role) as UserRole | undefined;
+    const userRole = payload.role as UserRole | undefined;
 
     if (!userRole || !allowedRoles.includes(userRole)) {
       return NextResponse.redirect(new URL(ROUTES.LOGIN, request.url));

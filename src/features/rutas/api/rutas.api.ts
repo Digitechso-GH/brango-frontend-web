@@ -13,6 +13,7 @@ export interface RouteListItem {
   status: RouteStatus;
   startedAt: string | null;
   completedAt: string | null;
+  overviewPolyline?: string | null;
   ordersCount: number;
   createdAt: string;
   updatedAt: string;
@@ -58,6 +59,7 @@ export interface RouteDetail {
   status: RouteStatus;
   startedAt: string | null;
   completedAt: string | null;
+  overviewPolyline?: string | null;
   assignments: RouteStopDetail[];
   createdAt: string;
   updatedAt: string;

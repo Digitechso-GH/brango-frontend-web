@@ -11,11 +11,14 @@ import {
   IconSearch, 
   IconTrash, 
   IconUpload, 
-  IconPlus 
+  IconPlus,
+  IconLink,
+  IconCheck
 } from "@tabler/icons-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { pedidosApi } from "../api/pedidos.api";
+import { ConsolidateStopsWidget } from "./ConsolidateStopsWidget";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -78,20 +81,129 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
     },
   });
 
+  const stopGroupMap = React.useMemo(() => {
+    const tempMap = new Map<
+      string,
+      { minCode: number; members: string[]; statuses: string[] }
+    >();
+
+    for (const ord of orders) {
+      if (ord.stopGroupId) {
+        const codeNum = Number(ord.code) || 0;
+        if (!tempMap.has(ord.stopGroupId)) {
+          tempMap.set(ord.stopGroupId, {
+            minCode: codeNum,
+            members: [],
+            statuses: [],
+          });
+        }
+        const data = tempMap.get(ord.stopGroupId)!;
+        if (codeNum < data.minCode) {
+          data.minCode = codeNum;
+        }
+        data.members.push(`#${ord.code}`);
+        data.statuses.push(ord.status);
+      }
+    }
+
+    // Orden ascendente por el menor código del grupo: el anterior se mantiene como #1 y el nuevo es #2, #3...
+    const sortedGroups = Array.from(tempMap.entries())
+      .map(([stopGroupId, data]) => ({ stopGroupId, ...data }))
+      .sort((a, b) => a.minCode - b.minCode);
+
+    const map = new Map<
+      string,
+      {
+        number: number;
+        members: string[];
+        total: number;
+        statusStyle: {
+          badge: string;
+          dot: string;
+          iconType: "check" | "link" | "pulse";
+        };
+      }
+    >();
+
+    sortedGroups.forEach((grp, index) => {
+      const num = index + 1;
+      const isDelivered = grp.statuses.length > 0 && grp.statuses.every((s) => s === ORDER_STATUS.DELIVERED);
+      const isInTransit = grp.statuses.some((s) => s === ORDER_STATUS.IN_TRANSIT);
+      const isFailed = grp.statuses.some((s) => s === ORDER_STATUS.FAILED || s === ORDER_STATUS.OBSERVED);
+
+      let statusStyle: {
+        badge: string;
+        dot: string;
+        iconType: "check" | "link" | "pulse";
+      } = {
+        badge: "text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border-indigo-200/80 dark:border-indigo-800/60",
+        dot: "bg-indigo-500",
+        iconType: "link",
+      };
+
+      if (isDelivered) {
+        statusStyle = {
+          badge: "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200/80 dark:border-emerald-800/60",
+          dot: "bg-emerald-500",
+          iconType: "check" as const,
+        };
+      } else if (isInTransit) {
+        statusStyle = {
+          badge: "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border-amber-200/80 dark:border-amber-800/60",
+          dot: "bg-amber-500 animate-pulse",
+          iconType: "pulse" as const,
+        };
+      } else if (isFailed) {
+        statusStyle = {
+          badge: "text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border-rose-200/80 dark:border-rose-800/60",
+          dot: "bg-rose-500",
+          iconType: "link" as const,
+        };
+      }
+
+      map.set(grp.stopGroupId, {
+        number: num,
+        members: grp.members,
+        total: grp.members.length,
+        statusStyle,
+      });
+    });
+
+    return map;
+  }, [orders]);
+
   const columns = [
     { 
       header: "Pedido", 
       accessorKey: "code",
+      meta: { align: "center" },
       cell: (info: any) => {
         const row = info.row.original;
+        const groupInfo = row.stopGroupId ? stopGroupMap.get(row.stopGroupId) : null;
+        const siblingCodes = groupInfo ? groupInfo.members.filter((m) => m !== `#${row.code}`) : [];
+
         return (
-          <div className="flex flex-col">
+          <div className="flex flex-col items-center justify-center text-center">
             <span className="font-bold text-xs text-slate-900 dark:text-white">
               #{row.code || info.getValue()}
             </span>
             <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
               {row.waybill ? `#${row.waybill}` : "sin guía"}
             </span>
+            {groupInfo && (
+              <span
+                title={`Consolidado #${groupInfo.number} (${groupInfo.members.join(", ")}): ${groupInfo.statusStyle.iconType === "check" ? "Entregado" : "Parada consolidada"}`}
+                className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-2xs mt-1 transition-all ${groupInfo.statusStyle.badge}`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${groupInfo.statusStyle.dot}`} />
+                {groupInfo.statusStyle.iconType === "check" ? (
+                  <IconCheck size={11} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <IconLink size={10} className="shrink-0" />
+                )}
+                <span>Consolidado #{groupInfo.number}</span>
+              </span>
+            )}
           </div>
         );
       }
@@ -187,8 +299,8 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
       meta: { align: "center" },
       cell: (info: any) => {
         const order = info.row.original;
-        const isEditable = order.status === ORDER_STATUS.PENDING;
-        const isDeletable = order.status === ORDER_STATUS.PENDING && !order.driverId;
+        const isEditable = order.status === ORDER_STATUS.PENDING && !order.driverId && !order.routeAssignmentId;
+        const isDeletable = order.status === ORDER_STATUS.PENDING && !order.driverId && !order.routeAssignmentId;
 
         return (
           <div className="flex items-center justify-center gap-2">
@@ -203,7 +315,13 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
               <IconEye size={17} />
             </button>
             <button
-              title={isEditable ? "Editar Pedido" : "Solo se pueden editar pedidos en estado Pendiente"}
+              title={
+                isEditable
+                  ? "Editar Pedido"
+                  : order.driverId || order.routeAssignmentId
+                  ? "No se puede editar: el pedido ya está asignado a un chofer o ruta"
+                  : "Solo se pueden editar pedidos en estado Pendiente y sin asignar"
+              }
               disabled={!isEditable}
               className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-25 disabled:pointer-events-none cursor-pointer"
               onClick={() => onEdit && onEdit(order)}
@@ -211,7 +329,13 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
               <IconPencil size={17} />
             </button>
             <button
-              title={isDeletable ? "Eliminar Pedido" : "Solo se pueden eliminar pedidos en estado Pendiente y sin asignar"}
+              title={
+                isDeletable
+                  ? "Eliminar Pedido"
+                  : order.driverId || order.routeAssignmentId
+                  ? "No se puede eliminar: el pedido ya está asignado a un chofer o ruta"
+                  : "Solo se pueden eliminar pedidos en estado Pendiente y sin asignar"
+              }
               disabled={!isDeletable || deleteMutation.isPending}
               className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:opacity-25 disabled:pointer-events-none cursor-pointer"
               onClick={() => {
@@ -248,19 +372,7 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
             {meta.total} resultados
           </span>
 
-          {onImportExcel && (
-            <Button variant="outline" size="md" onClick={onImportExcel} className="rounded-xl">
-              <IconUpload size={16} />
-              <span>Cargar Excel</span>
-            </Button>
-          )}
-
-          {onCreate && (
-            <Button variant="primary" size="md" onClick={onCreate} className="rounded-xl">
-              <IconPlus size={16} />
-              <span>Nuevo pedido</span>
-            </Button>
-          )}
+          <ConsolidateStopsWidget />
         </div>
       </div>
 

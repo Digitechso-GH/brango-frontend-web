@@ -6,10 +6,13 @@ import {
   IconShoppingBag, 
   IconClock, 
   IconAlertTriangle, 
-  IconCheck 
+  IconCheck,
+  IconUpload,
+  IconPlus
 } from "@tabler/icons-react";
 import { OrderTable } from "@/features/pedidos/components/OrderTable";
 import { OrderDrawer } from "@/features/pedidos/components/OrderDrawer";
+import { Button } from "@/shared/components/ui/Button";
 import { pedidosApi } from "@/features/pedidos/api/pedidos.api";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -113,6 +116,29 @@ export default function PedidosPage() {
             Todo lo que se mueve hoy, en un solo lugar.
           </p>
         </div>
+
+        {/* Action buttons at header level */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded-xl"
+          >
+            <IconUpload size={16} />
+            <span>Cargar Excel</span>
+          </Button>
+
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleCreate}
+            className="rounded-xl"
+          >
+            <IconPlus size={16} />
+            <span>Nuevo pedido</span>
+          </Button>
+        </div>
       </div>
 
       {/* Summary KPI Cards */}
@@ -161,8 +187,6 @@ export default function PedidosPage() {
       {/* Main Table with integrated action bar */}
       <OrderTable 
         onEdit={handleEdit} 
-        onCreate={handleCreate} 
-        onImportExcel={() => fileInputRef.current?.click()} 
       />
 
       {/* Create / Edit Drawer */}
