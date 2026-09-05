@@ -47,7 +47,7 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(100); // Límite amplio para ver todos los pedidos sin paginación
 
   // Reiniciar a página 1 cuando cambia la búsqueda
   useEffect(() => {
@@ -390,12 +390,12 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
         columns={columns}
         data={orders}
         isLoading={isLoading}
-        pagination={{
+        /* pagination={{
           page,
           totalPages: meta.totalPages,
           totalCount: meta.total,
           onPageChange: setPage,
-        }}
+        }} */
       />
 
       {/* Drawer de Detalle */}
