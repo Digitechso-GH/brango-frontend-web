@@ -6,17 +6,24 @@ import { GPSBrand } from "@/shared/components/ui/GPSBrand";
 import { ORDER_STATUS } from "@/shared/constants/order-status";
 import { getOrderStatusConfig } from "@/shared/utils/orderStatus.utils";
 import { formatLocalTime } from "@/shared/utils/date";
+import { IconPlayerPause, IconPlayerPlay } from "@tabler/icons-react";
 
 interface OrderCardProps {
   order: any;
   onFocusOrder?: (order: any) => void;
   onSelectOrder?: (orderId: string) => void;
+  onPauseOrder?: (order: any) => void;
+  onResumeOrder?: (order: any) => void;
+  isPausedView?: boolean;
 }
 
 export const OrderCard: React.FC<OrderCardProps> = ({
   order,
   onFocusOrder,
   onSelectOrder,
+  onPauseOrder,
+  onResumeOrder,
+  isPausedView = false,
 }) => {
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -68,10 +75,43 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         <span className="text-xs font-bold text-gray-400 dark:text-gray-500 font-mono tracking-tight">
           {orderCode}
         </span>
-        <Badge variant={statusConfig.variant} className="text-[9px] px-1.5 py-0.5 font-bold tracking-wider rounded">
-          {statusConfig.label}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          {!isPausedView && onPauseOrder && (
+            <button
+              type="button"
+              title="Pausar pedido (sin stock / reprogramar)"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPauseOrder(order);
+              }}
+              className="p-1 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors cursor-pointer"
+            >
+              <IconPlayerPause size={14} />
+            </button>
+          )}
+          <Badge variant={isPausedView ? "warning" : statusConfig.variant} className="text-[9px] px-1.5 py-0.5 font-bold tracking-wider rounded">
+            {isPausedView ? "PAUSADO" : statusConfig.label}
+          </Badge>
+        </div>
       </div>
+
+      {/* Indicador para pedidos observados (Reintentos) */}
+      {!isPausedView && rawStatus === ORDER_STATUS.OBSERVED && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 rounded-lg px-2 py-1 text-[10px] text-amber-700 dark:text-amber-300 flex items-center justify-between">
+          <span className="font-semibold truncate">
+            ⚠️ Reintento: {order.reasonText || "Observado previamente"}
+          </span>
+        </div>
+      )}
+
+      {/* Detalle para vista de pausados */}
+      {isPausedView && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 rounded-lg px-2 py-1 text-[10px] text-amber-700 dark:text-amber-300">
+          <span className="font-semibold block truncate">
+            Motivo: {order.pauseReason || "Sin stock en almacén"}
+          </span>
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-3 pt-0.5">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -94,6 +134,19 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </span>
         )}
       </div>
+
+      {isPausedView && onResumeOrder && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onResumeOrder(order);
+          }}
+          className="mt-1 w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-xs font-bold transition-colors cursor-pointer border border-emerald-200 dark:border-emerald-800/40"
+        >
+          <IconPlayerPlay size={13} /> Reanudar Pedido
+        </button>
+      )}
     </div>
   );
 };

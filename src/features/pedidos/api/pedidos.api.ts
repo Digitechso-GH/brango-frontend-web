@@ -194,4 +194,20 @@ export const pedidosApi = {
     const res = await api.post(`${API_ENDPOINTS.ORDERS}/group-evidence`, payload);
     return res.data.data ?? res.data;
   },
+
+  pauseOrder: async (id: string, reason: string) => {
+    const res = await api.patch(`${API_ENDPOINTS.ORDERS}/${id}/pause`, { reason });
+    return res.data.data ?? res.data;
+  },
+
+  resumeOrder: async (id: string) => {
+    const res = await api.patch(`${API_ENDPOINTS.ORDERS}/${id}/resume`);
+    return res.data.data ?? res.data;
+  },
+
+  getPausedOrders: async () => {
+    const res = await api.get(`${API_ENDPOINTS.ORDERS}/paused`);
+    const rawData = res.data.data ?? res.data ?? [];
+    return Array.isArray(rawData) ? rawData.map(normalizeOrder) : [];
+  },
 };

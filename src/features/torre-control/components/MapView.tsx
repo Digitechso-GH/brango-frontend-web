@@ -368,18 +368,27 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       }
     });
 
-    // 2. Dibujar Pedidos Pendientes Sin Asignar (Rojos)
-    const pendingUnassigned = allTodayOrders.filter(
-      (o: any) => o.status === ORDER_STATUS.PENDING && !o.routeAssignmentId && !o.driverId && !selectedOrderIds.includes(o.id)
-    );
+    // 2. Dibujar Pedidos Disponibles para Despacho (Pendientes sin chofer y Reintentos Observados)
+    const availableForDispatch = allTodayOrders.filter((o: any) => {
+      if (selectedOrderIds.includes(o.id)) return false;
+      if (o.status === ORDER_STATUS.PENDING && !o.driverId) return true;
+      if (o.status === ORDER_STATUS.OBSERVED) return true;
+      return false;
+    });
 
-    pendingUnassigned.forEach((order: any) => {
+    availableForDispatch.forEach((order: any) => {
       if (order.latitude && order.longitude) {
         const pt = { lat: Number(order.latitude), lng: Number(order.longitude) };
-        const markerId = `pending-${order.id}`;
+        const isObserved = order.status === ORDER_STATUS.OBSERVED;
+        const markerColor = isObserved ? "#F59E0B" : "#EF4444";
+        const markerTitle = isObserved
+          ? `Reintento (${order.code}): ${order.reasonText || "Observado previamente"}`
+          : `Pendiente: ${order.code}`;
+
+        const markerId = `available-${order.id}`;
         currentIds.add(markerId);
 
-        const htmlContent = DESTINATION_MARKER_HTML("#EF4444");
+        const htmlContent = DESTINATION_MARKER_HTML(markerColor);
 
         if (routeMarkersDict.current[markerId]) {
           const container = routeMarkersDict.current[markerId].content as HTMLElement;
@@ -388,7 +397,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
           const unassignedMarker = createAdvancedMarker({
             position: pt,
             map: googleMap,
-            title: `Pendiente: ${order.code}`,
+            title: markerTitle,
             htmlContent: htmlContent,
           });
 

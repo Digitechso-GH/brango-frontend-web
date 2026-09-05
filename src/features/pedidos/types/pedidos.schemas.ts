@@ -17,6 +17,10 @@ export const OrderSchema = z.object({
   geocodingStatus: z.string().nullable().optional(),
   originBranchId: z.string().nullable().optional(),
   customerId: z.string().nullable().optional(),
+  isPaused: z.boolean().optional(),
+  pauseReason: z.string().nullable().optional(),
+  pausedAt: z.string().or(z.date()).nullable().optional(),
+  pausedById: z.string().nullable().optional(),
   createdAt: z.string().or(z.date()),
   updatedAt: z.string().or(z.date()),
 });

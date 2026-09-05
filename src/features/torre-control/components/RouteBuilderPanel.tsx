@@ -52,9 +52,11 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   const { data: ordersResponse } = usePedidosTodayQuery();
   const allOrders = ordersResponse?.data || [];
 
-  const pendingOrders = allOrders.filter(
-    (o: any) => o.status === ORDER_STATUS.PENDING && !o.routeAssignmentId && !o.driverId
-  );
+  const pendingOrders = allOrders.filter((o: any) => {
+    if (o.status === ORDER_STATUS.PENDING && !o.driverId) return true;
+    if (o.status === ORDER_STATUS.OBSERVED) return true;
+    return false;
+  });
 
   const [localOrderIds, setLocalOrderIds] = useState<string[]>(selectedOrderIds);
 
