@@ -14,7 +14,6 @@ import {
   IconInfoCircle,
   IconChevronDown,
   IconCheck,
-  IconTrash,
   IconLink,
   IconUnlink
 } from "@tabler/icons-react";
@@ -22,6 +21,7 @@ import { GPSBrand } from "@/shared/components/ui/GPSBrand";
 import { Select } from "@/shared/components/ui/Select";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useUngroupStopMutation } from "../hooks/usePedidosMutations";
+import { usePauseOrderMutation, useResumeOrderMutation } from "../hooks/usePedidosQueries";
 import { toast } from "sonner";
 import { getLocalTodayString, formatLocalDate, formatLocalTime } from "@/shared/utils/date";
 
@@ -81,23 +81,33 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
     }
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => pedidosApi.deleteOrder(id),
-    onSuccess: () => {
-      toast.success("Pedido eliminado exitosamente");
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({ queryKey: ["orders-today"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-      onClose();
-    },
-    onError: (error: any) => {
-      toast.error("Error al eliminar: " + (error.response?.data?.message || error.message));
-    }
-  });
-
   const ungroupMutation = useUngroupStopMutation(() => {
     queryClient.invalidateQueries({ queryKey: ["order", orderId] });
   });
+
+  const pauseMutation = usePauseOrderMutation();
+  const resumeMutation = useResumeOrderMutation();
+
+  const handleTogglePause = async () => {
+    if (!order) return;
+    try {
+      if (order.isPaused) {
+        await resumeMutation.mutateAsync(order.id);
+        queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+        queryClient.invalidateQueries({ queryKey: ["orders-today"] });
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        toast.success("Pedido reanudado correctamente.");
+      } else {
+        await pauseMutation.mutateAsync({ id: order.id, reason: "Pausado por operador" });
+        queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+        queryClient.invalidateQueries({ queryKey: ["orders-today"] });
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        toast.success("Pedido puesto en pausa.");
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Error al actualizar estado del pedido");
+    }
+  };
 
   React.useEffect(() => {
     setImgError(false);
@@ -116,6 +126,15 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
   };
 
   const getStatusBadge = (status: string) => {
+    if (order?.isPaused) {
+      return (
+        <Badge variant="warning" className="text-xs px-3 py-1.5 font-bold tracking-wide rounded-lg">
+          <IconClock size={14} />
+          PAUSADO
+        </Badge>
+      );
+    }
+
     const statusConfig = getOrderStatusConfig(status);
     let label = statusConfig.label;
 
@@ -178,6 +197,7 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
       for (const ev of sorted) {
         let label = ev.type;
         let color = "gray";
+        let subLabel: string | undefined = undefined;
 
         if (ev.type === "REGISTERED") {
           const unitStr = assignment.driver?.unit ? `Unidad ${assignment.driver.unit}` : (assignment.driver?.name || "Chofer");
@@ -199,6 +219,7 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
           hasFinalForThisAssignment = true;
           label = "Observado";
           color = "red";
+          subLabel = assignment.reasonText || ev.metadata?.reason || order.reasonText || undefined;
         } else if (ev.type === "REASSIGNED") {
           const dateStr = formatLocalDate(ev.timestamp, { format: "long", includeYear: false });
           const actorStr = ev.actor ? `POR ${ev.actor}` : "POR SISTEMA";
@@ -214,6 +235,7 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
         events.push({
           id: ev.id,
           label,
+          subLabel,
           date: ev.timestamp,
           color,
           icon: <GPSBrand size={14} className="currentColor" />
@@ -425,34 +447,48 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-4">
-            {/* Botón Eliminar: Solo si está PENDING y NO tiene chofer asignado */}
-            {order.status === ORDER_STATUS.PENDING && !order.driverId ? (
-              <Button
-                variant="danger"
-                size="sm"
-                disabled={deleteMutation.isPending}
-                onClick={() => {
-                  if (window.confirm("¿Estás seguro de que deseas eliminar este pedido permanentemente? Esta acción no se puede deshacer.")) {
-                    deleteMutation.mutate(order.id);
+          <div className="mt-6 flex items-center justify-end border-t border-slate-100 dark:border-slate-800 pt-4">
+            <div className="flex items-center gap-2">
+              {/* Botón Pausar / Reanudar */}
+              {order.isPaused ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={resumeMutation.isPending}
+                  onClick={handleTogglePause}
+                  className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                >
+                  {resumeMutation.isPending ? "Reanudando..." : "Reanudar pedido"}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    pauseMutation.isPending ||
+                    order.status === ORDER_STATUS.IN_TRANSIT ||
+                    order.status === ORDER_STATUS.DELIVERED
                   }
-                }}
-              >
-                <IconTrash size={15} />
-                <span>{deleteMutation.isPending ? "Eliminando..." : "Eliminar"}</span>
-              </Button>
-            ) : (
-              <div /> /* Espaciador para mantener el justify-between */
-            )}
+                  onClick={handleTogglePause}
+                  className="text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                >
+                  {pauseMutation.isPending ? "Pausando..." : "Pausar pedido"}
+                </Button>
+              )}
 
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={order.status !== ORDER_STATUS.OBSERVED}
-              onClick={() => setIsReassignModalOpen(true)}
-            >
-              Reasignar unidad
-            </Button>
+              {/* 
+                NOTA: Botón temporalmente comentado para evaluación.
+                La reasignación se realiza ahora desde la Torre de Control y el armador de rutas.
+              */}
+              {/* <Button
+                variant="outline"
+                size="sm"
+                disabled={order.status !== ORDER_STATUS.OBSERVED}
+                onClick={() => setIsReassignModalOpen(true)}
+              >
+                Reasignar unidad
+              </Button> */}
+            </div>
           </div>
 
           {/* Modal Overlay de Reasignación */}

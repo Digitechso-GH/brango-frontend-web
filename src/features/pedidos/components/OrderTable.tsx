@@ -283,6 +283,15 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
       accessorKey: "status",
       meta: { align: "center" },
       cell: (info: any) => {
+        const order = info.row.original;
+        if (order?.isPaused) {
+          return (
+            <Badge variant="warning" withDot>
+              Pausado
+            </Badge>
+          );
+        }
+
         const val = info.getValue();
         const statusConfig = getOrderStatusConfig(val);
 

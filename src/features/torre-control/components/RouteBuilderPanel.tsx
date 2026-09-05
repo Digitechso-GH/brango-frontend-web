@@ -94,6 +94,11 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
     onReorder(localOrderIds);
   };
 
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+    onReorder(localOrderIds);
+  };
+
   const handleSaveRoute = async () => {
     if (!routeName.trim()) {
       toast.error("Debes ingresar el nombre de la ruta");
@@ -228,6 +233,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
                   onDragStart={(e) => handleDragStart(e, idx)}
                   onDragOver={(e) => handleDragOver(e, idx)}
                   onDrop={handleDrop}
+                  onDragEnd={handleDragEnd}
                   className={`flex items-center gap-3 p-3 bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-xs transition-all ${
                     draggedIdx === idx ? "opacity-40 scale-[0.98]" : "cursor-grab active:cursor-grabbing hover:border-slate-300 dark:hover:border-slate-700"
                   }`}
