@@ -12,7 +12,7 @@ export const ConfigForm = () => {
   const [eta, setEta] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [whatsappImage, setWhatsappImage] = useState<string | null>(null);
-  const [adminPhone, setAdminPhone] = useState("+51 987 000 111");
+  const [adminPhone, setAdminPhone] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export const ConfigForm = () => {
         <div className="max-w-xs mt-2">
           <Input 
             label="Número de WhatsApp" 
-            placeholder="+51 987 000 111" 
+            placeholder="Ej. +51 987 654 321" 
             value={adminPhone}
             onChange={(e) => setAdminPhone(e.target.value)}
           />
