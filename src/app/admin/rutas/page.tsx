@@ -35,14 +35,17 @@ import {
   IconCheck, 
   IconAlertCircle,
   IconChevronRight,
-  IconLink
+  IconLink,
+  IconSearch
 } from "@tabler/icons-react";
 import { formatLocalDate } from "@/shared/utils/date";
 
 export default function RutasPage() {
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [selectedDriverId, setSelectedDriverId] = useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [search, setSearch] = useState<string>("");
+  // Filtros comentados para fase futura
+  // const [selectedDate, setSelectedDate] = useState<string>("");
+  // const [selectedDriverId, setSelectedDriverId] = useState<string>("");
+  // const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
   // Queries
@@ -52,28 +55,38 @@ export default function RutasPage() {
     isLoading, 
     refetch, 
     isFetching 
-  } = useRoutesQuery({
-    date: selectedDate || undefined,
-    driverId: selectedDriverId || undefined,
-    status: selectedStatus !== "ALL" ? selectedStatus : undefined,
-  });
+  } = useRoutesQuery({ limit: 100 });
 
   const { data: routeDetail, isLoading: isLoadingDetail } = useRouteDetailQuery(selectedRouteId);
   const deleteRouteMutation = useDeleteRouteMutation();
 
-  const routes = routesData?.data || [];
+  const allRoutes = routesData?.data || [];
+
+  // Búsqueda en vivo por conductor, nombre de ruta, unidad o #índice
+  const routes = allRoutes.filter((r) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase().trim();
+    return (
+      (r.name && r.name.toLowerCase().includes(q)) ||
+      (r.driverName && r.driverName.toLowerCase().includes(q)) ||
+      (r.unit && r.unit.toLowerCase().includes(q)) ||
+      `#${r.sequenceIndex}`.includes(q)
+    );
+  });
 
   // Summary Metrics
-  const totalRoutes = routes.length;
-  const inProgressRoutes = routes.filter((r) => r.status === ROUTE_STATUS.IN_PROGRESS).length;
-  const pendingRoutes = routes.filter((r) => r.status === ROUTE_STATUS.PENDING).length;
-  const completedRoutes = routes.filter((r) => r.status === ROUTE_STATUS.COMPLETED).length;
+  const totalRoutes = allRoutes.length;
+  const inProgressRoutes = allRoutes.filter((r) => r.status === ROUTE_STATUS.IN_PROGRESS).length;
+  const pendingRoutes = allRoutes.filter((r) => r.status === ROUTE_STATUS.PENDING).length;
+  const completedRoutes = allRoutes.filter((r) => r.status === ROUTE_STATUS.COMPLETED).length;
 
+  /*
   const handleClearFilters = () => {
     setSelectedDate("");
     setSelectedDriverId("");
     setSelectedStatus("ALL");
   };
+  */
 
   const handleDeleteRoute = (id: string, name?: string | null) => {
     if (window.confirm(`¿Estás seguro de que deseas eliminar la ruta "${name || id}"? Los pedidos asociados volverán al estado pendiente sin asignar.`)) {
@@ -162,14 +175,29 @@ export default function RutasPage() {
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-3.5 shadow-sm flex flex-wrap items-center gap-3">
+      {/* Barra de Búsqueda (Filtros comentados para fase futura) */}
+      <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-3.5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative w-full sm:w-96">
+          <IconSearch size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Buscar por conductor, nombre de ruta, unidad..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-[#13131A] border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900 dark:text-white placeholder-slate-400 shadow-xs"
+          />
+        </div>
+
+        <span className="text-xs font-medium text-slate-400 dark:text-slate-500 shrink-0">
+          {routes.length} {routes.length === 1 ? "ruta encontrada" : "rutas encontradas"}
+        </span>
+
+        {/* Filtros comentados para fase futura
         <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
           <IconFilter size={15} />
           <span>Filtros</span>
         </div>
 
-        {/* Date filter */}
         <div className="flex items-center gap-2 bg-slate-50 dark:bg-[#13131A] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
           <IconCalendar size={15} className="text-slate-400" />
           <input
@@ -180,7 +208,6 @@ export default function RutasPage() {
           />
         </div>
 
-        {/* Driver filter */}
         <Select
           value={selectedDriverId}
           onChange={setSelectedDriverId}
@@ -195,7 +222,6 @@ export default function RutasPage() {
           icon={<IconSteeringWheel size={15} />}
         />
 
-        {/* Status filter */}
         <Select
           value={selectedStatus}
           onChange={setSelectedStatus}
@@ -211,6 +237,7 @@ export default function RutasPage() {
             Limpiar filtros
           </button>
         )}
+        */}
       </div>
 
       {/* Routes Table */}
