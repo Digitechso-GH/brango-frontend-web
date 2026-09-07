@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { trackingApi, PublicTrackingData } from "@/features/tracking/api/tracking.api";
 import { ORDER_STATUS_DETAILS } from "@/shared/constants/order-status";
+import { ORDER_STATUS_COLORS, VEHICLE_MARKER_COLOR } from "@/shared/constants/status-colors";
 import { loadGoogleMapsLibrary } from "@/shared/integrations/google/google-maps.loader";
 import { io, Socket } from "socket.io-client";
 import { 
@@ -136,9 +137,10 @@ export default function PublicTrackingPage() {
 
         // Marcador de Destino
         if (order.destinationLatitude && order.destinationLongitude) {
+          const pinColor = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS] || ORDER_STATUS_COLORS.PENDING;
           const destPin = document.createElement("div");
           destPin.innerHTML = `
-            <div style="background: #EF4444; color: white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); border: 2px solid white;">
+            <div style="background: ${pinColor}; color: white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); border: 2px solid white;">
               📍
             </div>
           `;
@@ -155,7 +157,7 @@ export default function PublicTrackingPage() {
         if (order.status === "IN_TRANSIT" && driverPos) {
           const driverPin = document.createElement("div");
           driverPin.innerHTML = `
-            <div style="background: #3D5FFF; color: white; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(61, 95, 255, 0.5); border: 2px solid white; animation: pulse 2s infinite;">
+            <div style="background: ${VEHICLE_MARKER_COLOR}; color: white; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(61, 95, 255, 0.5); border: 2px solid white; animation: pulse 2s infinite;">
               🚚
             </div>
           `;
@@ -174,7 +176,7 @@ export default function PublicTrackingPage() {
               map,
               suppressMarkers: true,
               polylineOptions: {
-                strokeColor: "#3D5FFF",
+                strokeColor: VEHICLE_MARKER_COLOR,
                 strokeWeight: 5,
                 strokeOpacity: 0.8,
               },
@@ -302,6 +304,21 @@ export default function PublicTrackingPage() {
                     </span>
                   )}
                 </div>
+
+                {/* Pedidos consolidados en esta entrega (del mismo cliente) */}
+                {order.groupedOrders && order.groupedOrders.length > 0 && (
+                  <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-3.5 flex flex-col gap-1.5">
+                    <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+                      Entrega consolidada multi-pedido
+                    </span>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">
+                      Esta misma visita incluye tus pedidos:{" "}
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        #{order.code}, {order.groupedOrders.map((g) => `#${g.code}${g.waybill ? ` (${g.waybill})` : ""}`).join(", ")}
+                      </span>
+                    </p>
+                  </div>
+                )}
 
                 {/* Progress Stepper */}
                 <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5">

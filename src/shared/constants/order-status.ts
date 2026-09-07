@@ -1,3 +1,5 @@
+import { ORDER_STATUS_COLORS } from "./status-colors";
+
 export const ORDER_STATUS = {
   PENDING: "PENDING",
   IN_TRANSIT: "IN_TRANSIT",
@@ -14,31 +16,31 @@ export const ORDER_STATUS_DETAILS: Record<
 > = {
   PENDING: {
     label: "Pendiente",
-    color: "#64748B",
+    color: ORDER_STATUS_COLORS.PENDING,
     badgeBg: "bg-gray-100 dark:bg-gray-800",
     badgeText: "text-gray-700 dark:text-gray-300",
   },
   IN_TRANSIT: {
     label: "En camino",
-    color: "#F59E0B",
+    color: ORDER_STATUS_COLORS.IN_TRANSIT,
     badgeBg: "bg-amber-100 dark:bg-amber-900/30",
     badgeText: "text-amber-700 dark:text-amber-400",
   },
   DELIVERED: {
     label: "Entregado",
-    color: "#10B981",
+    color: ORDER_STATUS_COLORS.DELIVERED,
     badgeBg: "bg-emerald-100 dark:bg-emerald-900/30",
     badgeText: "text-emerald-700 dark:text-emerald-400",
   },
   FAILED: {
     label: "Fallido",
-    color: "#EF4444",
+    color: ORDER_STATUS_COLORS.FAILED,
     badgeBg: "bg-red-100 dark:bg-red-900/30",
     badgeText: "text-red-700 dark:text-red-400",
   },
   OBSERVED: {
     label: "Observado",
-    color: "#EF4444",
+    color: ORDER_STATUS_COLORS.OBSERVED,
     badgeBg: "bg-red-100 dark:bg-red-900/30",
     badgeText: "text-red-700 dark:text-red-400",
   },

@@ -79,28 +79,26 @@ export const DriverTable = ({ onEdit }: DriverTableProps) => {
   ];
 
   return (
-    <div className="bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm overflow-hidden flex flex-col">
-      {/* Header con Buscador */}
-      <div className="p-4 border-b border-gray-100 dark:border-[#2D2D3D] flex items-center justify-between">
-        <div className="relative w-full max-w-md">
-          <IconSearch size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    <div className="flex flex-col gap-4">
+      {/* Buscador de Choferes */}
+      <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-3.5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative w-full sm:w-96">
+          <IconSearch size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Buscar por nombre, correo, teléfono o unidad..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-[#181824] border border-gray-200 dark:border-[#2D2D3D] rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-900 dark:text-white placeholder-gray-400"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-[#13131A] border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900 dark:text-white placeholder-slate-400 shadow-xs"
           />
         </div>
-        <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-          {filteredDrivers.length} choferes
-        </div>
+        <span className="text-xs font-medium text-slate-400 dark:text-slate-500 shrink-0">
+          {filteredDrivers.length} {filteredDrivers.length === 1 ? "chofer" : "choferes"}
+        </span>
       </div>
 
-      {/* Tabla */}
-      <div className="flex-1 overflow-y-auto">
-        <CleanTable columns={columns} data={filteredDrivers} isLoading={isLoading} />
-      </div>
+      {/* Tabla de Choferes */}
+      <CleanTable columns={columns} data={filteredDrivers} isLoading={isLoading} />
     </div>
   );
 };

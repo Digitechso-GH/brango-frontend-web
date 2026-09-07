@@ -6,6 +6,7 @@ import { useDriverTrackingSocket } from "../hooks/useDriverTrackingSocket";
 import { useMapRoute } from "../hooks/useMapRoute";
 import { useDriversQuery, usePedidosTodayQuery, useSedesQuery } from "@/features/pedidos/hooks/usePedidosQueries";
 import { ORDER_STATUS_DETAILS, ORDER_STATUS } from "@/shared/constants/order-status";
+import { ORDER_STATUS_COLORS, VEHICLE_MARKER_COLOR } from "@/shared/constants/status-colors";
 
 interface MapViewProps {
   focusedOrder?: any | null;
@@ -106,7 +107,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       const lng = livePos?.longitude ?? driver.longitude;
 
       if (lat !== null && lat !== undefined && lng !== null && lng !== undefined) {
-        let statusColor = "#EF4444";
+        let statusColor: string = ORDER_STATUS_COLORS.OBSERVED;
         let lastSeenText = "Sin señal reciente";
 
         if (livePos?.updatedAt) {
@@ -114,13 +115,13 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
           const minutes = Math.floor(diffMs / 60000);
 
           if (minutes < 5) {
-            statusColor = "#3D5FFF";
+            statusColor = VEHICLE_MARKER_COLOR;
             lastSeenText = minutes === 0 ? "hace instantes" : `hace ${minutes} min`;
           } else if (minutes <= 15) {
-            statusColor = "#F59E0B";
+            statusColor = ORDER_STATUS_COLORS.IN_TRANSIT;
             lastSeenText = `hace ${minutes} min`;
           } else {
-            statusColor = "#EF4444";
+            statusColor = ORDER_STATUS_COLORS.OBSERVED;
             lastSeenText = minutes >= 60 ? `hace ${Math.floor(minutes / 60)}h` : `hace ${minutes} min`;
           }
         }
@@ -207,7 +208,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
 
           if (!existingTruck) {
             const driverName = assignedDriver?.name ?? liveDriverPos?.name ?? "Sin nombre";
-            const statusColor = liveDriverPos?.statusColor || "#EF4444";
+            const statusColor = liveDriverPos?.statusColor || ORDER_STATUS_COLORS.OBSERVED;
             const truckMarker = createAdvancedMarker({
               position: originCoords,
               map: googleMap,
@@ -344,7 +345,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       const markerId = `route-${order.id}`;
       currentIds.add(markerId);
 
-      const htmlContent = DESTINATION_MARKER_HTML("#3D5FFF", `${idx + 1}`);
+      const htmlContent = DESTINATION_MARKER_HTML(VEHICLE_MARKER_COLOR, `${idx + 1}`);
 
       if (routeMarkersDict.current[markerId]) {
         // Actualizar solo el número (innerHTML) sin recrear el marcador en el mapa
@@ -380,7 +381,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       if (order.latitude && order.longitude) {
         const pt = { lat: Number(order.latitude), lng: Number(order.longitude) };
         const isObserved = order.status === ORDER_STATUS.OBSERVED;
-        const markerColor = isObserved ? "#F59E0B" : "#EF4444";
+        const markerColor = isObserved ? ORDER_STATUS_COLORS.OBSERVED : ORDER_STATUS_COLORS.PENDING;
         const markerTitle = isObserved
           ? `Reintento (${order.code}): ${order.reasonText || "Observado previamente"}`
           : `Pendiente: ${order.code}`;

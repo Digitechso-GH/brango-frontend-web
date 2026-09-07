@@ -363,22 +363,22 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Barra Superior: Buscador + Contador + Botones de Acción */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative w-full sm:w-80">
+      {/* Barra de Búsqueda en Paper Card */}
+      <div className="bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-3.5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative w-full sm:w-96">
           <IconSearch size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Buscar por cliente, pedido, guía..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#1A1A24] border border-slate-200/90 dark:border-slate-800 rounded-2xl text-xs sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900 dark:text-white placeholder-slate-400 shadow-xs"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-[#13131A] border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900 dark:text-white placeholder-slate-400 shadow-xs"
           />
         </div>
 
         <div className="flex items-center gap-3 justify-between sm:justify-end">
-          <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
-            {meta.total} resultados
+          <span className="text-xs font-medium text-slate-400 dark:text-slate-500 shrink-0">
+            {meta.total} {meta.total === 1 ? "resultado" : "resultados"}
           </span>
 
           <ConsolidateStopsWidget />

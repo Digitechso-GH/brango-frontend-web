@@ -14,6 +14,7 @@ import {
 import { useDuplicateSuggestionsQuery } from "../hooks/usePedidosQueries";
 import { useGroupStopsMutation, useUngroupStopMutation } from "../hooks/usePedidosMutations";
 import { Button } from "@/shared/components/ui/Button";
+import { formatLocalDate } from "@/shared/utils/date";
 
 interface ConsolidateStopsWidgetProps {
   date?: string;
@@ -170,7 +171,7 @@ export const ConsolidateStopsWidget: React.FC<ConsolidateStopsWidgetProps> = ({ 
             </div>
 
             {/* Body */}
-            <div className="p-6 flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-3">
+            <div className="p-5 sm:p-6 overflow-y-auto max-h-[58vh] flex flex-col gap-3 pr-3 sm:pr-4">
               {activeTab === "suggested" ? (
                 suggestedClusters.length === 0 ? (
                   <div className="text-center py-10 text-slate-400">
@@ -192,11 +193,18 @@ export const ConsolidateStopsWidget: React.FC<ConsolidateStopsWidgetProps> = ({ 
                             {cluster.address || "Dirección de entrega"}
                           </span>
                         </div>
-                        {cluster.driverName && (
-                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60 w-fit">
-                            Chofer: {cluster.driverName} {cluster.unit ? `(U-${cluster.unit})` : ""}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {cluster.date && (
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 w-fit">
+                              {formatLocalDate(cluster.date)}
+                            </span>
+                          )}
+                          {cluster.driverName && (
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60 w-fit">
+                              Chofer: {cluster.driverName} {cluster.unit ? `(U-${cluster.unit})` : ""}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="bg-white dark:bg-[#1A1A24] rounded-xl p-3 border border-slate-200/60 dark:border-slate-800/60 flex flex-col gap-2">

@@ -31,6 +31,10 @@ export interface PublicTrackingData {
     actor: string;
     timestamp: string;
   }>;
+  groupedOrders?: Array<{
+    code: string;
+    waybill: string | null;
+  }>;
   createdAt: string;
   updatedAt: string;
 }

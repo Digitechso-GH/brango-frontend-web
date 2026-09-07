@@ -53,9 +53,9 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   const allOrders = ordersResponse?.data || [];
 
   const pendingOrders = allOrders.filter((o: any) => {
-    if (o.status === ORDER_STATUS.PENDING && !o.driverId) return true;
     if (o.status === ORDER_STATUS.OBSERVED) return true;
-    return false;
+    if (o.driverId) return false;
+    return o.status === ORDER_STATUS.PENDING;
   });
 
   const [localOrderIds, setLocalOrderIds] = useState<string[]>(selectedOrderIds);
@@ -221,7 +221,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
             <div className="text-center p-6 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02]">
               <IconMapPin className="mx-auto text-slate-300 dark:text-slate-600 mb-2" size={24} />
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Haz clic en los marcadores rojos del mapa o agrégalos desde la lista de pendientes abajo.
+                Haz clic en los marcadores del mapa o agrégalos desde la lista de pendientes abajo.
               </p>
             </div>
           ) : (

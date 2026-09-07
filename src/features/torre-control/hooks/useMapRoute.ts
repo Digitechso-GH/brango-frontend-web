@@ -1,5 +1,6 @@
 import { useRef, useEffect } from "react";
 import { loadGoogleMapsLibrary } from "@/shared/integrations/google/google-maps.loader";
+import { VEHICLE_MARKER_COLOR } from "@/shared/constants/status-colors";
 
 export const useMapRoute = (map: google.maps.Map | null) => {
   const activePolylinesRef = useRef<any[]>([]);
@@ -52,7 +53,7 @@ export const useMapRoute = (map: google.maps.Map | null) => {
             const polyline = new google.maps.Polyline({
               path,
               geodesic: true,
-              strokeColor: i === 0 ? "#3D5FFF" : "#6066FF",
+              strokeColor: i === 0 ? VEHICLE_MARKER_COLOR : "#6066FF",
               strokeOpacity: 0.85,
               strokeWeight: 5,
               map: map,
@@ -63,7 +64,7 @@ export const useMapRoute = (map: google.maps.Map | null) => {
             const polyline = new google.maps.Polyline({
               path: [origin, destination],
               geodesic: true,
-              strokeColor: i === 0 ? "#3D5FFF" : "#6066FF",
+              strokeColor: i === 0 ? VEHICLE_MARKER_COLOR : "#6066FF",
               strokeOpacity: 0.85,
               strokeWeight: 4,
               map: map,
@@ -75,7 +76,7 @@ export const useMapRoute = (map: google.maps.Map | null) => {
           const polyline = new google.maps.Polyline({
             path: [origin, destination],
             geodesic: true,
-            strokeColor: "#3D5FFF",
+            strokeColor: VEHICLE_MARKER_COLOR,
             strokeOpacity: 0.85,
             strokeWeight: 4,
             map: map,
