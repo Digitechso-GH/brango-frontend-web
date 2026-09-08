@@ -72,8 +72,15 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
   const handleAddressChange = (val: string) => {
     setValue("rawAddress", val, { shouldValidate: true });
 
-    // 1. Extraer coordenadas si es una URL con patrón @lat,lng
-    const coordsMatch = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    // 1. Extraer coordenadas con prioridad estricta:
+    // a. Coordenadas exactas del pin del lugar (!3d{lat}!4d{lng})
+    // b. Parámetros de consulta directos (?q=lat,lng o ?ll=lat,lng)
+    // c. Fallback: Posición de cámara del mapa (@lat,lng)
+    const embeddedMatch = val.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    const queryMatch = val.match(/[?&](?:q|query|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const atMatch = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+
+    const coordsMatch = embeddedMatch || queryMatch || atMatch;
     if (coordsMatch && coordsMatch[1] && coordsMatch[2]) {
       setValue("latitude", coordsMatch[1]);
       setValue("longitude", coordsMatch[2]);
