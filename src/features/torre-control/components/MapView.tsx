@@ -210,14 +210,20 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
   const { drawMultiStopRoute, clearRoute } = useMapRoute(googleMap);
 
   const markersRef = useRef<any[]>([]);
+  const lastCenteredOrderIdRef = useRef<string | null>(null);
+  const lastDrawnRouteIdsRef = useRef<string>("");
 
   const [mapZoom, setMapZoom] = useState<number>(12);
 
   useEffect(() => {
     if (!googleMap) return;
-    const listener = googleMap.addListener("zoom_changed", () => {
+    // Escuchar únicamente 'idle' (cuando el usuario termina de hacer zoom o pan)
+    // Esto evita re-renderizados costosos mientras el usuario gira la rueda del ratón
+    const listener = googleMap.addListener("idle", () => {
       const z = googleMap.getZoom();
-      if (z !== undefined) setMapZoom(z);
+      if (z !== undefined) {
+        setMapZoom((prev) => (prev !== z ? z : prev));
+      }
     });
     return () => {
       google.maps.event.removeListener(listener);
@@ -233,6 +239,9 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
 
   useEffect(() => {
     setSelectedOrder(focusedOrder || null);
+    if (!focusedOrder) {
+      lastCenteredOrderIdRef.current = null;
+    }
   }, [focusedOrder, googleMap]);
 
   // Renderizar marcadores de choferes (🚚) y pedidos activos en el mapa
@@ -481,14 +490,19 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
           }
 
           // Ajustar cámara para mostrar tanto el punto de entrega como la posición del chofer
-          const bounds = new google.maps.LatLngBounds();
-          bounds.extend(destPos);
-          if (originCoords && (Math.abs(originCoords.lat - destPos.lat) > 0.0005 || Math.abs(originCoords.lng - destPos.lng) > 0.0005)) {
-            bounds.extend(originCoords);
-            googleMap.fitBounds(bounds, { top: 90, right: 90, bottom: 90, left: 90 });
-          } else {
-            googleMap.setCenter(destPos);
-            googleMap.setZoom(15);
+          // SOLO la primera vez que se enfoca el pedido (para no interrumpir el zoom manual del usuario cuando lleguen sockets)
+          const isNewFocus = lastCenteredOrderIdRef.current !== order.id;
+          if (isNewFocus) {
+            lastCenteredOrderIdRef.current = order.id;
+            const bounds = new google.maps.LatLngBounds();
+            bounds.extend(destPos);
+            if (originCoords && (Math.abs(originCoords.lat - destPos.lat) > 0.0005 || Math.abs(originCoords.lng - destPos.lng) > 0.0005)) {
+              bounds.extend(originCoords);
+              googleMap.fitBounds(bounds, { top: 90, right: 90, bottom: 90, left: 90 });
+            } else {
+              googleMap.setCenter(destPos);
+              googleMap.setZoom(16);
+            }
           }
         } else {
           routeWaypoints.push(destPos);
@@ -528,14 +542,18 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
             drawMultiStopRoute(routeWaypoints);
           }
 
-          const bounds = new google.maps.LatLngBounds();
-          bounds.extend(destPos);
-          if (originCoords) {
-            bounds.extend(originCoords);
-            googleMap.fitBounds(bounds, { top: 90, right: 90, bottom: 90, left: 90 });
-          } else {
-            googleMap.setCenter(destPos);
-            googleMap.setZoom(15);
+          const isNewFocus = lastCenteredOrderIdRef.current !== order.id;
+          if (isNewFocus) {
+            lastCenteredOrderIdRef.current = order.id;
+            const bounds = new google.maps.LatLngBounds();
+            bounds.extend(destPos);
+            if (originCoords) {
+              bounds.extend(originCoords);
+              googleMap.fitBounds(bounds, { top: 90, right: 90, bottom: 90, left: 90 });
+            } else {
+              googleMap.setCenter(destPos);
+              googleMap.setZoom(16);
+            }
           }
         }
       } else {
@@ -571,8 +589,12 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
 
         markersRef.current.push(destMarker);
 
-        googleMap.setCenter(destPos);
-        googleMap.setZoom(15);
+        const isNewFocus = lastCenteredOrderIdRef.current !== order.id;
+        if (isNewFocus) {
+          lastCenteredOrderIdRef.current = order.id;
+          googleMap.setCenter(destPos);
+          googleMap.setZoom(16);
+        }
       }
     }
 
@@ -708,19 +730,27 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
     });
 
     // 4. Dibujar la ruta ("la culebra") entre las paradas del Route Builder (1 -> 2 -> 3...)
+    // Solo cuando los pedidos de la ruta cambien efectivamente, para no recalcular polilíneas durante el zoom
     if (!selectedOrder) {
+      const currentRouteKey = selectedOrdersFull.map((o: any) => o.id).join(",");
       if (selectedOrdersFull.length >= 2) {
-        const routePoints = selectedOrdersFull
-          .filter((o: any) => o.latitude !== null && o.longitude !== null)
-          .map((o: any) => ({ lat: Number(o.latitude), lng: Number(o.longitude) }));
+        if (lastDrawnRouteIdsRef.current !== currentRouteKey) {
+          lastDrawnRouteIdsRef.current = currentRouteKey;
+          const routePoints = selectedOrdersFull
+            .filter((o: any) => o.latitude !== null && o.longitude !== null)
+            .map((o: any) => ({ lat: Number(o.latitude), lng: Number(o.longitude) }));
 
-        if (routePoints.length >= 2) {
-          drawMultiStopRoute(routePoints);
-        } else {
-          clearRoute();
+          if (routePoints.length >= 2) {
+            drawMultiStopRoute(routePoints);
+          } else {
+            clearRoute();
+          }
         }
       } else {
-        clearRoute();
+        if (lastDrawnRouteIdsRef.current !== "") {
+          lastDrawnRouteIdsRef.current = "";
+          clearRoute();
+        }
       }
     }
 
