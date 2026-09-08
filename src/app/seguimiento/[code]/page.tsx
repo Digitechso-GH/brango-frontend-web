@@ -323,11 +323,28 @@ export default function PublicTrackingPage() {
                 {/* Progress Stepper */}
                 <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5">
                   <div className="flex items-center justify-between relative">
-                    <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-1 bg-slate-100 dark:bg-slate-800 -z-0" />
+                    {/* Background track and dynamic progress bar */}
+                    <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-slate-100 dark:bg-slate-800 -z-0 overflow-hidden rounded-full">
+                      <div
+                        className={`h-full transition-all duration-500 ${
+                          order.status === "DELIVERED"
+                            ? "w-full bg-emerald-500"
+                            : order.status === "IN_TRANSIT"
+                            ? "w-1/2 bg-amber-500"
+                            : order.status === "OBSERVED" || order.status === "FAILED"
+                            ? "w-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500"
+                            : "w-0"
+                        }`}
+                      />
+                    </div>
                     
                     {/* Step 1: Registrado */}
                     <div className="flex flex-col items-center gap-2 z-10">
-                      <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-md shadow-blue-600/30">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-md ${
+                        order.status === "DELIVERED" || order.status === "IN_TRANSIT" || order.status === "OBSERVED" || order.status === "FAILED"
+                          ? "bg-emerald-600 text-white shadow-emerald-600/30"
+                          : "bg-blue-600 text-white ring-4 ring-blue-100 dark:ring-blue-900/40 shadow-blue-600/30"
+                      }`}>
                         <IconCheck size={16} />
                       </div>
                       <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Registrado</span>
@@ -337,9 +354,11 @@ export default function PublicTrackingPage() {
                     <div className="flex flex-col items-center gap-2 z-10">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                         order.status === "IN_TRANSIT"
-                          ? "bg-amber-500 text-white ring-4 ring-amber-100 dark:ring-amber-900/40 animate-pulse"
+                          ? "bg-amber-500 text-white ring-4 ring-amber-100 dark:ring-amber-900/40 animate-pulse shadow-md shadow-amber-500/30"
                           : order.status === "DELIVERED"
-                          ? "bg-emerald-600 text-white"
+                          ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                          : order.status === "OBSERVED" || order.status === "FAILED"
+                          ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
                           : "bg-slate-200 dark:bg-slate-800 text-slate-400"
                       }`}>
                         <IconTruck size={16} />
@@ -347,16 +366,20 @@ export default function PublicTrackingPage() {
                       <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">En Camino</span>
                     </div>
 
-                    {/* Step 3: Entregado */}
+                    {/* Step 3: Entregado / Observado */}
                     <div className="flex flex-col items-center gap-2 z-10">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                         order.status === "DELIVERED"
-                          ? "bg-emerald-600 text-white ring-4 ring-emerald-100 dark:ring-emerald-900/40"
+                          ? "bg-emerald-600 text-white ring-4 ring-emerald-100 dark:ring-emerald-900/40 shadow-md shadow-emerald-600/30"
                           : order.status === "FAILED" || order.status === "OBSERVED"
-                          ? "bg-red-500 text-white"
+                          ? "bg-red-500 text-white ring-4 ring-red-100 dark:ring-red-900/40 shadow-md shadow-red-500/30"
                           : "bg-slate-200 dark:bg-slate-800 text-slate-400"
                       }`}>
-                        <IconCheck size={16} />
+                        {order.status === "OBSERVED" || order.status === "FAILED" ? (
+                          <IconAlertCircle size={16} />
+                        ) : (
+                          <IconCheck size={16} />
+                        )}
                       </div>
                       <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                         {order.status === "OBSERVED" ? "Observado" : order.status === "FAILED" ? "Fallido" : "Entregado"}
