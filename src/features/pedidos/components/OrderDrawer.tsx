@@ -22,6 +22,7 @@ import {
   IconCalendar
 } from "@tabler/icons-react";
 import { useGoogleMapsLoader } from "@/shared/integrations/google/useGoogleMapsLoader";
+import { getLocalTodayString } from "@/shared/utils/date";
 
 interface OrderDrawerProps {
   isOpen: boolean;
@@ -180,7 +181,7 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
           latitude: order.latitude !== undefined && order.latitude !== null ? String(order.latitude) : "",
           longitude: order.longitude !== undefined && order.longitude !== null ? String(order.longitude) : "",
           driverId: order.driverId || "",
-          dueDate: order.dueDate ? new Date(order.dueDate).toISOString().slice(0, 10) : "",
+          dueDate: order.dueDate ? getLocalTodayString(order.dueDate) : "",
         });
       } else {
         setAddressMode("search");
