@@ -201,7 +201,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="p-8 pb-12 min-h-full flex flex-col">
+          <div className="p-4 sm:p-5 md:p-6 pb-6 min-h-full flex flex-col">
             {children}
           </div>
         </div>

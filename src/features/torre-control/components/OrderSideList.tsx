@@ -52,8 +52,8 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
 
   return (
     <div className="bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm flex flex-col h-full overflow-hidden">
-      <div className="p-4 border-b border-gray-100 dark:border-[#2D2D3D] flex flex-col gap-3">
-        <h3 className="text-lg font-black text-gray-900 dark:text-white tracking-tight">
+      <div className="p-3 border-b border-gray-100 dark:border-[#2D2D3D] flex flex-col gap-2">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white tracking-tight">
           Pedidos Activos
         </h3>
         <div className="flex items-center gap-2">
@@ -62,6 +62,7 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
               value={selectedDriver}
               onChange={setSelectedDriver}
               options={driverOptions}
+              size="sm"
             />
           </div>
           <div className="flex-1">
@@ -69,6 +70,7 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
               value={status}
               onChange={setStatus}
               options={ORDER_STATUS_FILTER_OPTIONS}
+              size="sm"
             />
           </div>
         </div>

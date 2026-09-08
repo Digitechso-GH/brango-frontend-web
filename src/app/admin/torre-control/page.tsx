@@ -43,10 +43,10 @@ export default function TorreControlPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col gap-6 h-[calc(100vh-9rem)] max-h-[calc(100vh-9rem)] min-h-[600px] overflow-hidden">
+    <div className="flex-1 flex flex-col gap-2 h-[calc(100vh-7.5rem)] max-h-[calc(100vh-7.5rem)] min-h-[520px] overflow-hidden">
       <StatsSummary />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 flex-1 min-h-0">
         <div className="lg:col-span-3 h-full relative min-h-0">
           <MapView
             focusedOrder={focusedOrder}
@@ -56,7 +56,7 @@ export default function TorreControlPage() {
           />
 
           {/* Panel Flotante del Route Builder */}
-          <div className="absolute top-4 left-4 w-96 h-[calc(100%-2rem)] z-10 pointer-events-none">
+          <div className="absolute top-2.5 left-2.5 w-80 sm:w-84 md:w-92 max-w-[calc(100%-1.25rem)] h-[calc(100%-1.25rem)] z-10 pointer-events-none">
             <div className="pointer-events-auto w-full h-full shadow-2xl rounded-2xl">
               <RouteBuilderPanel
                 selectedOrderIds={selectedOrderIds}
