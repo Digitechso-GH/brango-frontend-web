@@ -321,66 +321,74 @@ export default function PublicTrackingPage() {
                 )}
 
                 {/* Progress Stepper */}
-                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5">
-                  <div className="flex items-center justify-between relative">
-                    {/* Background track and dynamic progress bar */}
-                    <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-slate-100 dark:bg-slate-800 -z-0 overflow-hidden rounded-full">
-                      <div
-                        className={`h-full transition-all duration-500 ${
-                          order.status === "DELIVERED"
-                            ? "w-full bg-emerald-500"
-                            : order.status === "IN_TRANSIT"
-                            ? "w-1/2 bg-amber-500"
-                            : order.status === "OBSERVED" || order.status === "FAILED"
-                            ? "w-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500"
-                            : "w-0"
-                        }`}
-                      />
-                    </div>
-                    
-                    {/* Step 1: Registrado */}
-                    <div className="flex flex-col items-center gap-2 z-10">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-md ${
-                        order.status === "DELIVERED" || order.status === "IN_TRANSIT" || order.status === "OBSERVED" || order.status === "FAILED"
-                          ? "bg-emerald-600 text-white shadow-emerald-600/30"
-                          : "bg-blue-600 text-white ring-4 ring-blue-100 dark:ring-blue-900/40 shadow-blue-600/30"
-                      }`}>
-                        <IconCheck size={16} />
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Registrado</span>
+                <div className="border-t border-slate-100 dark:border-slate-800/80 pt-5 px-2">
+                  {/* Row 1: Step Circles & Connecting Flex Lines */}
+                  <div className="flex items-center w-full">
+                    {/* Step 1 Circle: Registrado */}
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-all shadow-md ${
+                      order.status === "DELIVERED" || order.status === "IN_TRANSIT" || order.status === "OBSERVED" || order.status === "FAILED"
+                        ? "bg-emerald-600 text-white shadow-emerald-600/30"
+                        : "bg-blue-600 text-white ring-4 ring-blue-100 dark:ring-blue-900/40 shadow-blue-600/30"
+                    }`}>
+                      <IconCheck size={18} stroke={2.5} />
                     </div>
 
-                    {/* Step 2: En Camino */}
-                    <div className="flex flex-col items-center gap-2 z-10">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                        order.status === "IN_TRANSIT"
-                          ? "bg-amber-500 text-white ring-4 ring-amber-100 dark:ring-amber-900/40 animate-pulse shadow-md shadow-amber-500/30"
-                          : order.status === "DELIVERED"
-                          ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
-                          : order.status === "OBSERVED" || order.status === "FAILED"
-                          ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
-                          : "bg-slate-200 dark:bg-slate-800 text-slate-400"
-                      }`}>
-                        <IconTruck size={16} />
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">En Camino</span>
+                    {/* Connector Line 1: Registrado -> En Camino */}
+                    <div className={`flex-1 h-1 mx-2 rounded-full transition-all duration-500 ${
+                      order.status === "IN_TRANSIT" || order.status === "DELIVERED" || order.status === "OBSERVED" || order.status === "FAILED"
+                        ? "bg-emerald-500"
+                        : "bg-slate-200 dark:bg-slate-800"
+                    }`} />
+
+                    {/* Step 2 Circle: En Camino */}
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-all ${
+                      order.status === "IN_TRANSIT"
+                        ? "bg-amber-500 text-white ring-4 ring-amber-100 dark:ring-amber-900/40 animate-pulse shadow-md shadow-amber-500/30"
+                        : order.status === "DELIVERED" || order.status === "OBSERVED" || order.status === "FAILED"
+                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700"
+                    }`}>
+                      <IconTruck size={18} />
                     </div>
 
-                    {/* Step 3: Entregado / Observado */}
-                    <div className="flex flex-col items-center gap-2 z-10">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                        order.status === "DELIVERED"
-                          ? "bg-emerald-600 text-white ring-4 ring-emerald-100 dark:ring-emerald-900/40 shadow-md shadow-emerald-600/30"
-                          : order.status === "FAILED" || order.status === "OBSERVED"
-                          ? "bg-red-500 text-white ring-4 ring-red-100 dark:ring-red-900/40 shadow-md shadow-red-500/30"
-                          : "bg-slate-200 dark:bg-slate-800 text-slate-400"
-                      }`}>
-                        {order.status === "OBSERVED" || order.status === "FAILED" ? (
-                          <IconAlertCircle size={16} />
-                        ) : (
-                          <IconCheck size={16} />
-                        )}
-                      </div>
+                    {/* Connector Line 2: En Camino -> Entregado / Observado */}
+                    <div className={`flex-1 h-1 mx-2 rounded-full transition-all duration-500 ${
+                      order.status === "DELIVERED"
+                        ? "bg-emerald-500"
+                        : order.status === "OBSERVED" || order.status === "FAILED"
+                        ? "bg-red-500"
+                        : "bg-slate-200 dark:bg-slate-800"
+                    }`} />
+
+                    {/* Step 3 Circle: Entregado / Observado */}
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-all ${
+                      order.status === "DELIVERED"
+                        ? "bg-emerald-600 text-white ring-4 ring-emerald-100 dark:ring-emerald-900/40 shadow-md shadow-emerald-600/30"
+                        : order.status === "FAILED" || order.status === "OBSERVED"
+                        ? "bg-red-500 text-white ring-4 ring-red-100 dark:ring-red-900/40 shadow-md shadow-red-500/30"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700"
+                    }`}>
+                      {order.status === "OBSERVED" || order.status === "FAILED" ? (
+                        <IconAlertCircle size={18} />
+                      ) : (
+                        <IconCheck size={18} stroke={2.5} />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Row 2: Text Labels neatly aligned under each step */}
+                  <div className="flex justify-between items-center mt-2.5 px-0.5">
+                    <div className="w-24 text-left">
+                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        Registrado
+                      </span>
+                    </div>
+                    <div className="w-24 text-center">
+                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        En Camino
+                      </span>
+                    </div>
+                    <div className="w-24 text-right">
                       <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                         {order.status === "OBSERVED" ? "Observado" : order.status === "FAILED" ? "Fallido" : "Entregado"}
                       </span>

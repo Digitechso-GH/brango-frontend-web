@@ -400,26 +400,64 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
           });
 
           const sortedPendingOrders = activeDriverOrders.sort((a: any, b: any) => (a.sequenceIndex || 0) - (b.sequenceIndex || 0));
+          const isSelectedFinished = order.status === "DELIVERED" || order.status === "OBSERVED" || order.status === "FAILED";
 
-          const points = [
-            originCoords,
-            ...sortedPendingOrders.map((o: any) => ({ lat: Number(o.latitude), lng: Number(o.longitude) })),
-          ];
-          drawMultiStopRoute(points);
+          // Trazar ruta únicamente si el pedido seleccionado está activo/en tránsito
+          if (!isSelectedFinished && sortedPendingOrders.length > 0) {
+            const points = [
+              originCoords,
+              ...sortedPendingOrders.map((o: any) => ({ lat: Number(o.latitude), lng: Number(o.longitude) })),
+            ];
+            drawMultiStopRoute(points);
+          }
 
-          // Renderizar los marcadores de destino
-          sortedPendingOrders.forEach((actOrd: any, idx: number) => {
-            const pt = { lat: Number(actOrd.latitude), lng: Number(actOrd.longitude) };
-            routeWaypoints.push(pt);
+          // Renderizar los marcadores de destino de paradas pendientes si no es un pedido finalizado
+          if (!isSelectedFinished) {
+            sortedPendingOrders.forEach((actOrd: any, idx: number) => {
+              const pt = { lat: Number(actOrd.latitude), lng: Number(actOrd.longitude) };
+              routeWaypoints.push(pt);
 
-            const statusDetail = ORDER_STATUS_DETAILS[actOrd.status] || ORDER_STATUS_DETAILS.PENDING;
-            const clienteNombre = getClientName(actOrd) || "Cliente";
+              const statusDetail = ORDER_STATUS_DETAILS[actOrd.status] || ORDER_STATUS_DETAILS.PENDING;
+              const clienteNombre = getClientName(actOrd) || "Cliente";
+
+              const destMarker = createAdvancedMarker({
+                position: pt,
+                map: googleMap,
+                title: "",
+                htmlContent: DESTINATION_MARKER_HTML(statusDetail.color, `${idx + 1}`, clienteNombre, actOrd.code),
+              });
+
+              destMarker.addListener("gmp-click", () => {
+                infoWindow.setContent(`
+                  <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
+                    <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
+                      ${clienteNombre}
+                    </div>
+                    <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
+                      Pedido: <span style="font-weight: 600; color: #1a73e8;">#${actOrd.code}</span>
+                    </div>
+                  </div>
+                `);
+                infoWindow.open(googleMap, destMarker);
+              });
+
+              markersRef.current.push(destMarker);
+            });
+          }
+
+          // Renderizar SIEMPRE el marcador de destino del pedido seleccionado si no está entre los pendientes
+          const isSelectedInPending = !isSelectedFinished && sortedPendingOrders.some((o: any) => o.id === selectedOrder.id);
+          if (!isSelectedInPending) {
+            const statusDetail = ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;
+            const clienteNombre = getClientName(order) || "Cliente";
+            const badgeText = order.status === "DELIVERED" ? "✓" : "📍";
 
             const destMarker = createAdvancedMarker({
-              position: pt,
+              position: destPos,
               map: googleMap,
               title: "",
-              htmlContent: DESTINATION_MARKER_HTML(statusDetail.color, `${idx + 1}`, clienteNombre, actOrd.code),
+              htmlContent: DESTINATION_MARKER_HTML(statusDetail.color, badgeText, clienteNombre, order.code),
+              zIndex: 100,
             });
 
             destMarker.addListener("gmp-click", () => {
@@ -429,7 +467,10 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
                     ${clienteNombre}
                   </div>
                   <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
-                    Pedido: <span style="font-weight: 600; color: #1a73e8;">#${actOrd.code}</span>
+                    Pedido: <span style="font-weight: 600; color: #1a73e8;">#${order.code}</span>
+                  </div>
+                  <div style="font-size: 11px; font-weight: 500; color: ${statusDetail.color}; line-height: 1.2; margin-top: 2px;">
+                    Estado: <strong>${statusDetail.label}</strong>
                   </div>
                 </div>
               `);
@@ -437,18 +478,31 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
             });
 
             markersRef.current.push(destMarker);
-          });
+          }
+
+          // Ajustar cámara para mostrar tanto el punto de entrega como la posición del chofer
+          const bounds = new google.maps.LatLngBounds();
+          bounds.extend(destPos);
+          if (originCoords && (Math.abs(originCoords.lat - destPos.lat) > 0.0005 || Math.abs(originCoords.lng - destPos.lng) > 0.0005)) {
+            bounds.extend(originCoords);
+            googleMap.fitBounds(bounds, { top: 90, right: 90, bottom: 90, left: 90 });
+          } else {
+            googleMap.setCenter(destPos);
+            googleMap.setZoom(15);
+          }
         } else {
           routeWaypoints.push(destPos);
 
           const statusDetail = ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;
           const clienteNombre = getClientName(order) || "Cliente";
+          const badgeText = order.status === "DELIVERED" ? "✓" : "📍";
 
           const destMarker = createAdvancedMarker({
             position: destPos,
             map: googleMap,
             title: "",
-            htmlContent: DESTINATION_MARKER_HTML(statusDetail.color, '📍', clienteNombre, order.code),
+            htmlContent: DESTINATION_MARKER_HTML(statusDetail.color, badgeText, clienteNombre, order.code),
+            zIndex: 100,
           });
 
           destMarker.addListener("gmp-click", () => {
@@ -460,28 +514,42 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
                 <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
                   Pedido: <span style="font-weight: 600; color: #1a73e8;">#${order.code}</span>
                 </div>
+                <div style="font-size: 11px; font-weight: 500; color: ${statusDetail.color}; line-height: 1.2; margin-top: 2px;">
+                  Estado: <strong>${statusDetail.label}</strong>
+                </div>
               </div>
             `);
             infoWindow.open(googleMap, destMarker);
           });
 
           markersRef.current.push(destMarker);
-        }
 
-        // Trazar la polilínea multiparada
-        if (routeWaypoints.length >= 2) {
-          drawMultiStopRoute(routeWaypoints);
+          if (routeWaypoints.length >= 2) {
+            drawMultiStopRoute(routeWaypoints);
+          }
+
+          const bounds = new google.maps.LatLngBounds();
+          bounds.extend(destPos);
+          if (originCoords) {
+            bounds.extend(originCoords);
+            googleMap.fitBounds(bounds, { top: 90, right: 90, bottom: 90, left: 90 });
+          } else {
+            googleMap.setCenter(destPos);
+            googleMap.setZoom(15);
+          }
         }
       } else {
         // CHOFER SIN UBICACIÓN REGISTRADA: Mostrar únicamente la parada de destino (📍)
         const statusDetail = ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;
         const clienteNombre = getClientName(order) || "Cliente";
+        const badgeText = order.status === "DELIVERED" ? "✓" : "📍";
 
         const destMarker = createAdvancedMarker({
           position: destPos,
           map: googleMap,
           title: "",
-          htmlContent: DESTINATION_MARKER_HTML(statusDetail.color, '📍', clienteNombre, order.code),
+          htmlContent: DESTINATION_MARKER_HTML(statusDetail.color, badgeText, clienteNombre, order.code),
+          zIndex: 100,
         });
 
         destMarker.addListener("gmp-click", () => {
@@ -493,12 +561,18 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
               <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
                 Pedido: <span style="font-weight: 600; color: #1a73e8;">#${order.code}</span>
               </div>
+              <div style="font-size: 11px; font-weight: 500; color: ${statusDetail.color}; line-height: 1.2; margin-top: 2px;">
+                Estado: <strong>${statusDetail.label}</strong>
+              </div>
             </div>
           `);
           infoWindow.open(googleMap, destMarker);
         });
 
         markersRef.current.push(destMarker);
+
+        googleMap.setCenter(destPos);
+        googleMap.setZoom(15);
       }
     }
 
