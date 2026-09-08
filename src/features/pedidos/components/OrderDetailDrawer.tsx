@@ -23,6 +23,7 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useUngroupStopMutation } from "../hooks/usePedidosMutations";
 import { usePauseOrderMutation, useResumeOrderMutation } from "../hooks/usePedidosQueries";
 import { toast } from "sonner";
+import { getOrderValidity } from "@/shared/utils/orderValidity.utils";
 import { getLocalTodayString, formatLocalDate, formatLocalTime } from "@/shared/utils/date";
 
 interface OrderDetailDrawerProps {
@@ -219,7 +220,7 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
           hasFinalForThisAssignment = true;
           label = "Observado";
           color = "red";
-          subLabel = assignment.reasonText || ev.metadata?.reason || order.reasonText || undefined;
+          subLabel = ev.metadata?.reasonText || assignment.reasonText || ev.metadata?.reason || order.reasonText || undefined;
         } else if (ev.type === "REASSIGNED") {
           const dateStr = formatLocalDate(ev.timestamp, { format: "long", includeYear: false });
           const actorStr = ev.actor ? `POR ${ev.actor}` : "POR SISTEMA";
@@ -249,8 +250,8 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
   const clientTitle = order ? getClientName(order) : "";
   const orderSubtitle = order && order.code ? `Pedido #${order.code}` : "";
 
-  const latestAssignment = order?.assignments?.[order.assignments.length - 1];
-  const evidenceImage = latestAssignment?.evidences?.[0]?.s3Url || null;
+  const latestAssignmentWithEvidence = order?.assignments?.slice().reverse().find((a: any) => a.evidences && a.evidences.length > 0) || order?.assignments?.[order.assignments.length - 1];
+  const evidenceImage = latestAssignmentWithEvidence?.evidences?.[0]?.s3Url || null;
 
   const showImage = !!evidenceImage && !imgError;
 
@@ -278,9 +279,9 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
 
           {/* Parada Compartida */}
           {order.stopGroupId && (
-            <div className="bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 rounded-2xl p-3.5 flex flex-col gap-2">
+            <div className="bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-2xl p-3.5 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-blue-300">
                   <IconLink size={15} />
                   <span>Parada Compartida</span>
                 </div>
@@ -294,7 +295,7 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
                         ungroupMutation.mutate(order.routeAssignmentId);
                       }
                     }}
-                    className="text-[11px] py-1 px-2.5 rounded-lg border-indigo-200 dark:border-indigo-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    className="text-[11px] py-1 px-2.5 rounded-lg border-blue-200 dark:border-blue-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
                   >
                     <IconUnlink size={13} />
                     <span>{ungroupMutation.isPending ? "Separando..." : "Separar parada"}</span>
@@ -384,15 +385,38 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
               </span>
             </div>
 
-            {/* Motivo de Observación (Solo si la asignación activa fue marcada como OBSERVED) */}
-            {order.reasonText && (
-              <div className="flex justify-between items-start py-2.5">
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">Motivo de observación</span>
-                <span className="text-xs font-medium text-red-500 text-right ml-4 max-w-[220px] leading-snug">
-                  {order.reasonText === 'AUTO_CLOSED_EOD' ? 'Cierre automático fin de jornada (Sin finalizar)' : order.reasonText}
+            {/* Vencimiento y Vigencia */}
+            <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Vencimiento</span>
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const val = getOrderValidity(order.createdAt, order.dueDate);
+                  const badgeVariant = val.status === "FRESH" ? "success" : val.status === "WARNING" ? "warning" : "danger";
+                  return (
+                    <Badge variant={badgeVariant} withDot className="text-[10px] py-0.5 px-2">
+                      {val.label}
+                    </Badge>
+                  );
+                })()}
+                <span className="text-xs font-medium text-slate-900 dark:text-white text-right">
+                  {order.dueDate ? formatLocalDate(order.dueDate, { format: "short" }) : "Fin del día"}
                 </span>
               </div>
-            )}
+            </div>
+
+            {/* Motivo de Observación */}
+            {(() => {
+              const reason = order.reasonText || order.assignments?.slice().reverse().find((a: any) => a.reasonText)?.reasonText;
+              if (!reason) return null;
+              return (
+                <div className="flex justify-between items-start py-2.5 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">Motivo de observación</span>
+                  <span className="text-xs font-medium text-red-500 text-right ml-4 max-w-[220px] leading-snug">
+                    {reason === 'AUTO_CLOSED_EOD' ? 'Cierre automático fin de jornada (Sin finalizar)' : reason}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* 4. Línea de Tiempo */}

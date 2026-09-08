@@ -4,8 +4,10 @@ import { VEHICLE_MARKER_COLOR } from "@/shared/constants/status-colors";
 
 export const useMapRoute = (map: google.maps.Map | null) => {
   const activePolylinesRef = useRef<any[]>([]);
+  const requestIdRef = useRef<number>(0);
 
   const clearRoute = () => {
+    requestIdRef.current += 1;
     activePolylinesRef.current.forEach((polyline) => {
       if (polyline.setMap) polyline.setMap(null);
       else if ("map" in polyline) polyline.map = null;
@@ -14,9 +16,13 @@ export const useMapRoute = (map: google.maps.Map | null) => {
   };
 
   const drawMultiStopRoute = async (points: Array<{ lat: number; lng: number }>) => {
-    if (!map || !points || points.length < 2) return;
+    if (!map || !points || points.length < 2) {
+      clearRoute();
+      return;
+    }
 
     clearRoute();
+    const currentReqId = requestIdRef.current;
 
     const bounds = new google.maps.LatLngBounds();
     points.forEach((pt) => bounds.extend(pt));
@@ -27,6 +33,11 @@ export const useMapRoute = (map: google.maps.Map | null) => {
       for (let i = 0; i < points.length - 1; i++) {
         const origin = points[i];
         const destination = points[i + 1];
+
+        // Evitar llamar Directions si el origen y destino son prácticamente idénticos
+        if (Math.abs(origin.lat - destination.lat) < 0.00005 && Math.abs(origin.lng - destination.lng) < 0.00005) {
+          continue;
+        }
 
         try {
           const result = await new Promise<google.maps.DirectionsResult | null>((resolve) => {
@@ -46,6 +57,8 @@ export const useMapRoute = (map: google.maps.Map | null) => {
             );
           });
 
+          if (requestIdRef.current !== currentReqId) return;
+
           if (result && result.routes && result.routes[0]) {
             const path = result.routes[0].overview_path;
             path.forEach((pt) => bounds.extend(pt));
@@ -53,7 +66,7 @@ export const useMapRoute = (map: google.maps.Map | null) => {
             const polyline = new google.maps.Polyline({
               path,
               geodesic: true,
-              strokeColor: i === 0 ? VEHICLE_MARKER_COLOR : "#6066FF",
+              strokeColor: VEHICLE_MARKER_COLOR,
               strokeOpacity: 0.85,
               strokeWeight: 5,
               map: map,
@@ -64,7 +77,7 @@ export const useMapRoute = (map: google.maps.Map | null) => {
             const polyline = new google.maps.Polyline({
               path: [origin, destination],
               geodesic: true,
-              strokeColor: i === 0 ? VEHICLE_MARKER_COLOR : "#6066FF",
+              strokeColor: VEHICLE_MARKER_COLOR,
               strokeOpacity: 0.85,
               strokeWeight: 4,
               map: map,
@@ -72,6 +85,7 @@ export const useMapRoute = (map: google.maps.Map | null) => {
             activePolylinesRef.current.push(polyline);
           }
         } catch (err) {
+          if (requestIdRef.current !== currentReqId) return;
           console.error("Error al calcular tramo de ruta:", err);
           const polyline = new google.maps.Polyline({
             path: [origin, destination],

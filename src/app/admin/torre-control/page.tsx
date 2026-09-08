@@ -21,7 +21,7 @@ export default function TorreControlPage() {
   };
 
   const handleFocusOrder = (order: any) => {
-    setFocusedOrder(order);
+    setFocusedOrder((prev: any) => prev?.id === order?.id ? null : order);
   };
 
   const handleSelectOrderForRoute = (orderId: string) => {
@@ -48,16 +48,17 @@ export default function TorreControlPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
         <div className="lg:col-span-3 h-full relative min-h-0">
-          <MapView 
-            focusedOrder={focusedOrder} 
+          <MapView
+            focusedOrder={focusedOrder}
             selectedOrderIds={selectedOrderIds}
             onSelectOrderForRoute={handleSelectOrderForRoute}
+            onClearFocus={() => setFocusedOrder(null)}
           />
-          
+
           {/* Panel Flotante del Route Builder */}
           <div className="absolute top-4 left-4 w-96 h-[calc(100%-2rem)] z-10 pointer-events-none">
             <div className="pointer-events-auto w-full h-full shadow-2xl rounded-2xl">
-              <RouteBuilderPanel 
+              <RouteBuilderPanel
                 selectedOrderIds={selectedOrderIds}
                 onSelectOrder={handleSelectOrderForRoute}
                 onRemoveOrder={handleRemoveOrderFromRoute}
@@ -73,10 +74,10 @@ export default function TorreControlPage() {
         </div>
       </div>
 
-      <OrderDetailDrawer 
-        isOpen={drawerOpen} 
-        onClose={() => setDrawerOpen(false)} 
-        orderId={activeOrderId} 
+      <OrderDetailDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        orderId={activeOrderId}
       />
     </div>
   );

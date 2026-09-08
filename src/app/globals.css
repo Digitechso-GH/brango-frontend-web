@@ -113,3 +113,61 @@
 .gm-ui-hover-effect {
   display: none !important;
 }
+
+/* Tooltip estilo Google Maps para marcadores en el mapa */
+.marker-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  width: 38px;
+  height: 38px;
+}
+
+.marker-wrapper:hover .custom-map-tooltip,
+.marker-wrapper:focus .custom-map-tooltip,
+.marker-wrapper:focus-within .custom-map-tooltip {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateX(-50%) translateY(0px) !important;
+}
+
+.custom-map-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.16s cubic-bezier(0, 0, 0.2, 1), transform 0.16s cubic-bezier(0, 0, 0.2, 1), visibility 0.16s;
+  white-space: nowrap;
+  z-index: 99999;
+  filter: drop-shadow(0 2px 5px rgba(60, 64, 67, 0.3));
+}
+
+.custom-map-tooltip-bubble {
+  background: #FFFFFF;
+  color: #202124;
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  padding: 6px 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  min-width: 120px;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 2px 6px 2px rgba(60, 64, 67, 0.15);
+}
+
+.custom-map-tooltip-arrow {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #FFFFFF;
+  margin: 0 auto;
+}
+

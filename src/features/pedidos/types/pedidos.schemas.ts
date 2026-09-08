@@ -21,6 +21,7 @@ export const OrderSchema = z.object({
   pauseReason: z.string().nullable().optional(),
   pausedAt: z.string().or(z.date()).nullable().optional(),
   pausedById: z.string().nullable().optional(),
+  dueDate: z.string().or(z.date()).nullable().optional(),
   createdAt: z.string().or(z.date()),
   updatedAt: z.string().or(z.date()),
 });

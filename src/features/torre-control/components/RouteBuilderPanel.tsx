@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import { useAvailableDriversQuery, usePedidosTodayQuery } from "@/features/pedidos/hooks/usePedidosQueries";
-import { 
-  IconMapPin, 
-  IconGripVertical, 
-  IconPlus, 
-  IconX, 
+import {
+  IconMapPin,
+  IconGripVertical,
+  IconPlus,
+  IconX,
   IconDeviceFloppy,
   IconSteeringWheel,
   IconCalendar
@@ -82,7 +82,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
     const draggedItem = newArr[draggedIdx];
     newArr.splice(draggedIdx, 1);
     newArr.splice(idx, 0, draggedItem);
-    
+
     setLocalOrderIds(newArr);
     setDraggedIdx(idx);
   };
@@ -133,7 +133,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
       setRouteName("");
       setDriverId("");
       setDate(todayStr);
-      
+
       // Invalidar caché para actualizar cartillas y listas de inmediato sin recargar la página
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders-today"] }),
@@ -141,7 +141,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
         queryClient.invalidateQueries({ queryKey: ["available-drivers"] }),
         queryClient.invalidateQueries({ queryKey: ["admin-routes"] }),
       ]);
-      
+
       if (onRouteSaved) onRouteSaved();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Error al crear la ruta");
@@ -156,15 +156,15 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
     <div className="flex flex-col h-full bg-white dark:bg-[#1A1A24] rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800/80 overflow-hidden">
       <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-white/5">
         <h2 className="text-lg font-black text-slate-900 dark:text-white mb-4">Armar Nueva Ruta</h2>
-        
+
         <div className="space-y-3.5">
           {/* Nombre de la ruta (Obligatorio) */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               Nombre de la Ruta <span className="text-rose-500">*</span>
             </label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={routeName}
               onChange={e => setRouteName(e.target.value)}
               placeholder="Ej. Ruta Norte - Mañana"
@@ -179,8 +179,8 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
                 Fecha <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   value={date}
                   min={todayStr}
                   onChange={e => setDate(e.target.value)}
@@ -216,7 +216,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
               {selectedOrderIds.length} {selectedOrderIds.length === 1 ? "pedido" : "pedidos"}
             </span>
           </h3>
-          
+
           {selectedOrdersData.length === 0 ? (
             <div className="text-center p-6 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02]">
               <IconMapPin className="mx-auto text-slate-300 dark:text-slate-600 mb-2" size={24} />
@@ -227,16 +227,15 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
           ) : (
             <div className="space-y-2">
               {selectedOrdersData.map((order, idx) => (
-                <div 
+                <div
                   key={order.id}
                   draggable
                   onDragStart={(e) => handleDragStart(e, idx)}
                   onDragOver={(e) => handleDragOver(e, idx)}
                   onDrop={handleDrop}
                   onDragEnd={handleDragEnd}
-                  className={`flex items-center gap-3 p-3 bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-xs transition-all ${
-                    draggedIdx === idx ? "opacity-40 scale-[0.98]" : "cursor-grab active:cursor-grabbing hover:border-slate-300 dark:hover:border-slate-700"
-                  }`}
+                  className={`flex items-center gap-3 p-3 bg-white dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-xs transition-all ${draggedIdx === idx ? "opacity-40 scale-[0.98]" : "cursor-grab active:cursor-grabbing hover:border-slate-300 dark:hover:border-slate-700"
+                    }`}
                 >
                   <div className="text-slate-400 dark:text-slate-500 shrink-0">
                     <IconGripVertical size={16} />
@@ -252,8 +251,8 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
                       {order.recipientName || order.customer?.name || "Cliente"}
                     </p>
                   </div>
-                  <button 
-                    onClick={() => onRemoveOrder(order.id)} 
+                  <button
+                    onClick={() => onRemoveOrder(order.id)}
                     className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                     title="Quitar parada"
                   >
@@ -270,8 +269,8 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
           <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Pendientes sin Ruta</h3>
           <div className="space-y-2">
             {pendingOrders.filter((o: any) => !selectedOrderIds.includes(o.id)).map((order: any) => (
-              <div 
-                key={order.id} 
+              <div
+                key={order.id}
                 className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-slate-800/80 rounded-xl hover:border-slate-200 dark:hover:border-slate-700 transition-colors"
               >
                 <div className="flex-1 min-w-0 pr-3">
@@ -282,7 +281,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
                     {order.formattedAddress || order.rawAddress || "Dirección no disponible"}
                   </p>
                 </div>
-                <button 
+                <button
                   onClick={() => onSelectOrder(order.id)}
                   className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
                   title="Agregar a la ruta"

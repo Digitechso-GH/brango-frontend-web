@@ -20,6 +20,7 @@ export const orderSchema = z.object({
   latitude: z.string().optional(),
   longitude: z.string().optional(),
   driverId: z.string().optional(),
+  dueDate: z.string().optional(),
 }).superRefine((data, ctx) => {
   const doc = (data.recipientDocument || "").trim();
   if (doc.length > 0) {

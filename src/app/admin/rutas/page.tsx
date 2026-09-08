@@ -2,37 +2,37 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { 
-  useRoutesQuery, 
-  useRouteDetailQuery, 
-  useDeleteRouteMutation 
+import {
+  useRoutesQuery,
+  useRouteDetailQuery,
+  useDeleteRouteMutation
 } from "@/features/rutas/hooks/useRutasQueries";
 import { useDriversQuery } from "@/features/pedidos/hooks/usePedidosQueries";
-import { 
-  ROUTE_STATUS, 
-  ROUTE_STATUS_DETAILS, 
+import {
+  ROUTE_STATUS,
+  ROUTE_STATUS_DETAILS,
   ROUTE_STATUS_FILTER_OPTIONS,
-  RouteStatus 
+  RouteStatus
 } from "@/shared/constants/route-status";
 import { ORDER_STATUS_DETAILS } from "@/shared/constants/order-status";
 import { ROUTES } from "@/shared/constants/routes";
 import { Select } from "@/shared/components/ui/Select";
 import { BaseDrawer } from "@/shared/components/ui/BaseDrawer";
 import { Button } from "@/shared/components/ui/Button";
-import { 
-  IconRoute, 
-  IconPlus, 
-  IconCalendar, 
-  IconSteeringWheel, 
-  IconFilter, 
-  IconRefresh, 
-  IconEye, 
-  IconTrash, 
-  IconX, 
-  IconBox, 
-  IconMapPin, 
-  IconClock, 
-  IconCheck, 
+import {
+  IconRoute,
+  IconPlus,
+  IconCalendar,
+  IconSteeringWheel,
+  IconFilter,
+  IconRefresh,
+  IconEye,
+  IconTrash,
+  IconX,
+  IconBox,
+  IconMapPin,
+  IconClock,
+  IconCheck,
   IconAlertCircle,
   IconChevronRight,
   IconLink,
@@ -50,11 +50,11 @@ export default function RutasPage() {
 
   // Queries
   const { data: drivers = [] } = useDriversQuery();
-  const { 
-    data: routesData, 
-    isLoading, 
-    refetch, 
-    isFetching 
+  const {
+    data: routesData,
+    isLoading,
+    refetch,
+    isFetching
   } = useRoutesQuery({ limit: 100 });
 
   const { data: routeDetail, isLoading: isLoadingDetail } = useRouteDetailQuery(selectedRouteId);

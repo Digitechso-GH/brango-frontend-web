@@ -6,44 +6,197 @@ import { useDriverTrackingSocket } from "../hooks/useDriverTrackingSocket";
 import { useMapRoute } from "../hooks/useMapRoute";
 import { useDriversQuery, usePedidosTodayQuery, useSedesQuery } from "@/features/pedidos/hooks/usePedidosQueries";
 import { ORDER_STATUS_DETAILS, ORDER_STATUS } from "@/shared/constants/order-status";
-import { ORDER_STATUS_COLORS, VEHICLE_MARKER_COLOR } from "@/shared/constants/status-colors";
+import { ORDER_STATUS_COLORS, VEHICLE_MARKER_COLOR, ORDER_VALIDITY_COLORS } from "@/shared/constants/status-colors";
+import { getOrderValidity } from "@/shared/utils/orderValidity.utils";
 
 interface MapViewProps {
   focusedOrder?: any | null;
   selectedOrderIds?: string[];
   onSelectOrderForRoute?: (id: string) => void;
+  onClearFocus?: () => void;
 }
 
-const TRUCK_MARKER_HTML = (color: string) => `
-  <div style="background: ${color}; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 14px rgba(0,0,0,0.35); cursor: pointer;">
-    <span style="font-size: 22px; line-height: 1;">🚚</span>
+const GOOGLE_STYLE_TOOLTIP_HTML = (clientName: string, orderCode: string) => {
+  const cleanCode = String(orderCode || "").replace(/^#/, "");
+  return `
+    <div class="custom-map-tooltip">
+      <div class="custom-map-tooltip-bubble">
+        <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          ${clientName}
+        </div>
+        <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
+          Pedido: <span style="font-weight: 600; color: #1a73e8;">#${cleanCode}</span>
+        </div>
+      </div>
+      <div class="custom-map-tooltip-arrow"></div>
+    </div>
+  `;
+};
+
+const TRUCK_MARKER_HTML = (color: string, driverName?: string, statusText?: string) => `
+  <div class="marker-wrapper">
+    ${driverName ? `
+      <div class="custom-map-tooltip">
+        <div class="custom-map-tooltip-bubble">
+          <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${driverName}
+          </div>
+          <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
+            ${statusText || "En ruta"}
+          </div>
+        </div>
+        <div class="custom-map-tooltip-arrow"></div>
+      </div>
+    ` : ""}
+    <div style="background: ${color}; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 14px rgba(0,0,0,0.35); cursor: pointer; transition: transform 0.15s ease;">
+      <span style="font-size: 22px; line-height: 1;">🚚</span>
+    </div>
   </div>
 `;
 
-const DESTINATION_MARKER_HTML = (color: string, label?: string) => `
-  <div style="background: ${color}; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer;">
-    <span style="font-size: 16px; font-weight: bold; color: white; line-height: 1;">${label || '📍'}</span>
+const DESTINATION_MARKER_HTML = (color: string, label?: string, clientName?: string, orderCode?: string) => `
+  <div class="marker-wrapper">
+    ${clientName && orderCode ? GOOGLE_STYLE_TOOLTIP_HTML(clientName, orderCode) : ""}
+    <div style="background: ${color}; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.15s ease;">
+      <span style="font-size: 16px; font-weight: bold; color: white; line-height: 1;">${label || '📍'}</span>
+    </div>
   </div>
 `;
+
+const VALIDITY_ORDER_MARKER_HTML = (color: string, clientName: string, orderCode: string) => `
+  <div class="marker-wrapper">
+    ${GOOGLE_STYLE_TOOLTIP_HTML(clientName, orderCode)}
+    <div style="
+      background: ${color};
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: transform 0.15s ease;
+    ">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <polyline points="12 7 12 12 15 15"/>
+      </svg>
+    </div>
+  </div>
+`;
+
+const cleanMatrizText = (text?: string | null) => {
+  if (!text) return "";
+  return text.replace(/\s*-\s*Matriz/gi, "").replace(/\s*Matriz/gi, "").trim();
+};
+
+const getClientName = (ord: any): string => {
+  if (!ord) return "";
+  const rawName = ord.recipientCustomerType === "INDIVIDUAL" ? ord.recipientName : (ord.customer?.name || ord.recipientName);
+  return cleanMatrizText(rawName || "");
+};
+
+function bindTooltipHover(container: HTMLElement) {
+  const tooltip = container.querySelector(".custom-map-tooltip") as HTMLElement;
+  if (!tooltip) return;
+
+  const show = () => {
+    tooltip.style.opacity = "1";
+    tooltip.style.visibility = "visible";
+    tooltip.style.transform = "translateX(-50%) translateY(0px)";
+  };
+
+  const hide = () => {
+    tooltip.style.opacity = "0";
+    tooltip.style.visibility = "hidden";
+    tooltip.style.transform = "translateX(-50%) translateY(4px)";
+  };
+
+  container.onmouseenter = show;
+  container.onmouseleave = hide;
+  container.onpointerenter = show;
+  container.onpointerleave = hide;
+
+  const wrapper = container.querySelector(".marker-wrapper") as HTMLElement;
+  if (wrapper) {
+    wrapper.onmouseenter = show;
+    wrapper.onmouseleave = hide;
+    wrapper.onpointerenter = show;
+    wrapper.onpointerleave = hide;
+  }
+}
+
+function getJitteredPosition(
+  lat: number,
+  lng: number,
+  indexInGroup: number,
+  totalInGroup: number,
+  zoom: number = 12
+): { lat: number; lng: number } {
+  if (totalInGroup <= 1) return { lat, lng };
+
+  // Calculate degrees needed for a clear visual separation (~28px from center, giving ~18px gap between 38px circles)
+  const safeZoom = Math.max(zoom, 10);
+  const metersPerPixel = (156543.03392 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, safeZoom);
+  const separationMeters = Math.max(28 * metersPerPixel, 30);
+  const radius = separationMeters / 111000;
+
+  const angle = (2 * Math.PI / totalInGroup) * indexInGroup;
+  return {
+    lat: lat + radius * Math.sin(angle),
+    lng: lng + radius * Math.cos(angle) * 1.15,
+  };
+}
 
 function createAdvancedMarker(options: {
   position: { lat: number; lng: number };
   map: google.maps.Map;
-  title: string;
+  title?: string;
   htmlContent: string;
+  zIndex?: number;
 }): google.maps.marker.AdvancedMarkerElement {
   const container = document.createElement("div");
+  container.style.width = "38px";
+  container.style.height = "38px";
+  container.style.position = "relative";
   container.innerHTML = options.htmlContent.trim();
+  bindTooltipHover(container);
 
   return new google.maps.marker.AdvancedMarkerElement({
     position: options.position,
     map: options.map,
-    title: options.title,
+    title: "", // Do NOT use browser native tooltip
     content: container,
+    zIndex: options.zIndex ?? 10,
   });
 }
 
-export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds = [], onSelectOrderForRoute }) => {
+function createValidityMarker(options: {
+  position: { lat: number; lng: number };
+  map: google.maps.Map;
+  validityColor: string;
+  clientName: string;
+  orderCode: string;
+  zIndex?: number;
+}): google.maps.marker.AdvancedMarkerElement {
+  const container = document.createElement("div");
+  container.style.width = "38px";
+  container.style.height = "38px";
+  container.style.position = "relative";
+  container.innerHTML = VALIDITY_ORDER_MARKER_HTML(options.validityColor, options.clientName, options.orderCode).trim();
+  bindTooltipHover(container);
+
+  return new google.maps.marker.AdvancedMarkerElement({
+    position: options.position,
+    map: options.map,
+    title: "", // Do NOT use browser native tooltip
+    content: container,
+    zIndex: options.zIndex ?? 10,
+  });
+}
+
+export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds = [], onSelectOrderForRoute, onClearFocus }) => {
   const [googleMap, setGoogleMap] = useState<google.maps.Map | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [timeTick, setTimeTick] = useState(0); 
@@ -58,6 +211,19 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
 
   const markersRef = useRef<any[]>([]);
 
+  const [mapZoom, setMapZoom] = useState<number>(12);
+
+  useEffect(() => {
+    if (!googleMap) return;
+    const listener = googleMap.addListener("zoom_changed", () => {
+      const z = googleMap.getZoom();
+      if (z !== undefined) setMapZoom(z);
+    });
+    return () => {
+      google.maps.event.removeListener(listener);
+    };
+  }, [googleMap]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeTick((prev) => prev + 1);
@@ -66,16 +232,16 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
   }, []);
 
   useEffect(() => {
-    if (focusedOrder) {
-      setSelectedOrder(focusedOrder);
-    }
+    setSelectedOrder(focusedOrder || null);
   }, [focusedOrder, googleMap]);
 
   // Renderizar marcadores de choferes (🚚) y pedidos activos en el mapa
   useEffect(() => {
     if (!googleMap) return;
 
-    clearRoute();
+    if (selectedOrder) {
+      clearRoute();
+    }
 
     // Limpiar marcadores anteriores
     markersRef.current.forEach((m) => {
@@ -137,20 +303,30 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       }
     });
 
-    // Dibujar cada Chofer en el mapa con su respectivo color según inactividad
-    Object.entries(activeDriverPositions).forEach(([id, posInfo]) => {
+    // Dibujar Chofer(es): si hay un pedido enfocado, mostrar únicamente su chofer asignado
+    const driversToRender = selectedOrder
+      ? selectedOrder.driverId
+        ? Object.entries(activeDriverPositions).filter(([id]) => id === selectedOrder.driverId)
+        : []
+      : Object.entries(activeDriverPositions);
+
+    driversToRender.forEach(([id, posInfo]) => {
       const truckMarker = createAdvancedMarker({
         position: { lat: posInfo.lat, lng: posInfo.lng },
         map: googleMap,
-        title: `🚚 ${posInfo.name}`,
-        htmlContent: TRUCK_MARKER_HTML(posInfo.statusColor),
+        title: "",
+        htmlContent: TRUCK_MARKER_HTML(posInfo.statusColor, posInfo.name, posInfo.lastSeenText),
       });
 
       truckMarker.addListener("gmp-click", () => {
         infoWindow.setContent(`
-          <div style="color: #111; padding: 6px 8px; font-family: sans-serif; font-size: 13px;">
-            <p style="margin: 0 0 3px 0; color: #333;">Chofer: <b>${posInfo.name}</b></p>
-            <p style="margin: 0; color: #333;">Última posición: <b style="color: ${posInfo.statusColor};">${posInfo.lastSeenText}</b></p>
+          <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
+            <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
+              ${posInfo.name}
+            </div>
+            <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
+              Última posición: <span style="font-weight: 600; color: ${posInfo.statusColor};">${posInfo.lastSeenText}</span>
+            </div>
           </div>
         `);
         infoWindow.open(googleMap, truckMarker);
@@ -167,16 +343,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       const order = selectedOrder;
       const destPos = { lat: orderLat, lng: orderLng };
 
-      const cleanMatrizText = (text?: string | null) => {
-        if (!text) return "";
-        return text.replace(/\s*-\s*Matriz/gi, "").replace(/\s*Matriz/gi, "").trim();
-      };
 
-      const getClientName = (ord: any): string => {
-        if (!ord) return "";
-        const rawName = ord.recipientCustomerType === "INDIVIDUAL" ? ord.recipientName : ord.customer?.name;
-        return cleanMatrizText(rawName || "");
-      };
 
       const driverId = order.driverId;
       const assignedDriver = driverId ? drivers.find((d: any) => d.id === driverId) : null;
@@ -212,8 +379,8 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
             const truckMarker = createAdvancedMarker({
               position: originCoords,
               map: googleMap,
-              title: `🚚 ${driverName}`,
-              htmlContent: TRUCK_MARKER_HTML(statusColor),
+              title: "",
+              htmlContent: TRUCK_MARKER_HTML(statusColor, driverName, liveDriverPos?.lastSeenText),
             });
             markersRef.current.push(truckMarker);
           }
@@ -246,20 +413,24 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
             routeWaypoints.push(pt);
 
             const statusDetail = ORDER_STATUS_DETAILS[actOrd.status] || ORDER_STATUS_DETAILS.PENDING;
-            const clienteNombre = getClientName(actOrd);
+            const clienteNombre = getClientName(actOrd) || "Cliente";
 
             const destMarker = createAdvancedMarker({
               position: pt,
               map: googleMap,
-              title: `📍 Parada ${idx + 1}: ${actOrd.code}`,
-              htmlContent: DESTINATION_MARKER_HTML(statusDetail.color),
+              title: "",
+              htmlContent: DESTINATION_MARKER_HTML(statusDetail.color, `${idx + 1}`, clienteNombre, actOrd.code),
             });
 
             destMarker.addListener("gmp-click", () => {
               infoWindow.setContent(`
-                <div style="color: #111; padding: 6px 8px; font-family: sans-serif; font-size: 13px;">
-                  <p style="margin: 0 0 3px 0; color: #333;">Parada ${idx + 1} - Cliente: <b>${clienteNombre}</b></p>
-                  <p style="margin: 0; color: #333;">Estado: <b style="color:${statusDetail.color}">${statusDetail.label}</b></p>
+                <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
+                  <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
+                    ${clienteNombre}
+                  </div>
+                  <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
+                    Pedido: <span style="font-weight: 600; color: #1a73e8;">#${actOrd.code}</span>
+                  </div>
                 </div>
               `);
               infoWindow.open(googleMap, destMarker);
@@ -271,20 +442,24 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
           routeWaypoints.push(destPos);
 
           const statusDetail = ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;
-          const clienteNombre = getClientName(order);
+          const clienteNombre = getClientName(order) || "Cliente";
 
           const destMarker = createAdvancedMarker({
             position: destPos,
             map: googleMap,
-            title: `📍 Pedido: ${order.code}`,
-            htmlContent: DESTINATION_MARKER_HTML(statusDetail.color),
+            title: "",
+            htmlContent: DESTINATION_MARKER_HTML(statusDetail.color, '📍', clienteNombre, order.code),
           });
 
           destMarker.addListener("gmp-click", () => {
             infoWindow.setContent(`
-              <div style="color: #111; padding: 6px 8px; font-family: sans-serif; font-size: 13px;">
-                <p style="margin: 0 0 3px 0; color: #333;">Cliente: <b>${clienteNombre}</b></p>
-                <p style="margin: 0; color: #333;">Estado: <b style="color:${statusDetail.color}">${statusDetail.label}</b></p>
+              <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
+                <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
+                  ${clienteNombre}
+                </div>
+                <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
+                  Pedido: <span style="font-weight: 600; color: #1a73e8;">#${order.code}</span>
+                </div>
               </div>
             `);
             infoWindow.open(googleMap, destMarker);
@@ -300,20 +475,24 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       } else {
         // CHOFER SIN UBICACIÓN REGISTRADA: Mostrar únicamente la parada de destino (📍)
         const statusDetail = ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;
-        const clienteNombre = getClientName(order);
+        const clienteNombre = getClientName(order) || "Cliente";
 
         const destMarker = createAdvancedMarker({
           position: destPos,
           map: googleMap,
-          title: `📍 Parada: ${order.code}`,
-          htmlContent: DESTINATION_MARKER_HTML(statusDetail.color),
+          title: "",
+          htmlContent: DESTINATION_MARKER_HTML(statusDetail.color, '📍', clienteNombre, order.code),
         });
 
         destMarker.addListener("gmp-click", () => {
           infoWindow.setContent(`
-            <div style="color: #111; padding: 6px 8px; font-family: sans-serif; font-size: 13px;">
-              <p style="margin: 0 0 3px 0; color: #333;">Cliente: <b>${clienteNombre}</b></p>
-              <p style="margin: 0; color: #333;">Estado: <b style="color:${statusDetail.color}">${statusDetail.label}</b></p>
+            <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
+              <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
+                ${clienteNombre}
+              </div>
+              <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
+                Pedido: <span style="font-weight: 600; color: #1a73e8;">#${order.code}</span>
+              </div>
             </div>
           `);
           infoWindow.open(googleMap, destMarker);
@@ -337,79 +516,111 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
 
     const currentIds = new Set<string>();
 
-    // 1. Dibujar Route Builder (SIN polilínea, solo marcadores numerados)
-    const selectedOrdersFull = selectedOrderIds.map(id => allTodayOrders.find((o: any) => o.id === id)).filter(Boolean);
-    
-    selectedOrdersFull.forEach((order: any, idx: number) => {
-      const pt = { lat: Number(order.latitude), lng: Number(order.longitude) };
-      const markerId = `route-${order.id}`;
+    // 1. Obtener órdenes del Route Builder y Pedidos Disponibles
+    const selectedOrdersFull = selectedOrderIds
+      .map((id) => allTodayOrders.find((o: any) => o.id === id))
+      .filter(Boolean);
+
+    const availableForDispatch = selectedOrder
+      ? []
+      : allTodayOrders.filter((o: any) => {
+          if (selectedOrderIds.includes(o.id)) return false;
+          if (o.status === ORDER_STATUS.PENDING && !o.driverId) return true;
+          if (o.status === ORDER_STATUS.OBSERVED) return true;
+          return false;
+        });
+
+    // 2. Agrupar órdenes visibles para evitar que marcadores en coordenadas idénticas se solapen
+    const visibleItems = [
+      ...selectedOrdersFull.map((o: any, idx: number) => ({ order: o, isRoute: true, routeIdx: idx })),
+      ...availableForDispatch.map((o: any) => ({ order: o, isRoute: false, routeIdx: -1 })),
+    ].filter((item) => item.order.latitude !== null && item.order.longitude !== null);
+
+    const coordGroups = new Map<string, Array<{ order: any; isRoute: boolean; routeIdx: number }>>();
+    visibleItems.forEach((item) => {
+      const key = `${Number(item.order.latitude).toFixed(4)},${Number(item.order.longitude).toFixed(4)}`;
+      if (!coordGroups.has(key)) coordGroups.set(key, []);
+      coordGroups.get(key)!.push(item);
+    });
+
+    // Ordenamiento canónico e inmutable por código e ID de pedido
+    // Evita que los marcadores en la misma coordenada intercambien posiciones al cambiar entre pendiente y ruta
+    coordGroups.forEach((group) => {
+      group.sort((a, b) => {
+        const codeA = Number(a.order.code) || 0;
+        const codeB = Number(b.order.code) || 0;
+        if (codeA !== codeB) return codeA - codeB;
+        return a.order.id.localeCompare(b.order.id);
+      });
+    });
+
+    const currentZoom = googleMap.getZoom() || mapZoom;
+
+    const getPos = (item: { order: any; isRoute: boolean; routeIdx: number }) => {
+      const baseLat = Number(item.order.latitude);
+      const baseLng = Number(item.order.longitude);
+      const key = `${baseLat.toFixed(4)},${baseLng.toFixed(4)}`;
+      const group = coordGroups.get(key) || [];
+      const idx = group.indexOf(item);
+      return getJitteredPosition(baseLat, baseLng, idx >= 0 ? idx : 0, group.length, currentZoom);
+    };
+
+    // 3. Renderizar cada marcador visible
+    visibleItems.forEach((item) => {
+      const { order, isRoute, routeIdx } = item;
+      const pt = getPos(item);
+      const clientName = getClientName(order) || "Cliente";
+      const orderCode = String(order.code || "");
+      const markerId = isRoute ? `route-${order.id}` : `available-${order.id}`;
       currentIds.add(markerId);
 
-      const htmlContent = DESTINATION_MARKER_HTML(VEHICLE_MARKER_COLOR, `${idx + 1}`);
+      let htmlContent: string;
+      if (isRoute) {
+        htmlContent = DESTINATION_MARKER_HTML(VEHICLE_MARKER_COLOR, `${routeIdx + 1}`, clientName, orderCode);
+      } else {
+        const validity = getOrderValidity(order.createdAt, order.dueDate);
+        const markerColor = ORDER_VALIDITY_COLORS[validity.status];
+        htmlContent = VALIDITY_ORDER_MARKER_HTML(markerColor, clientName, orderCode);
+      }
 
       if (routeMarkersDict.current[markerId]) {
-        // Actualizar solo el número (innerHTML) sin recrear el marcador en el mapa
-        const container = routeMarkersDict.current[markerId].content as HTMLElement;
-        if (container) container.innerHTML = htmlContent.trim();
+        const m = routeMarkersDict.current[markerId];
+        if (m.position && (m.position.lat !== pt.lat || m.position.lng !== pt.lng)) {
+          m.position = pt;
+        }
+        m.zIndex = isRoute ? 100 + routeIdx : 10;
+        const container = m.content as HTMLElement;
+        if (container) {
+          container.innerHTML = htmlContent.trim();
+          bindTooltipHover(container);
+        }
       } else {
-        // Crear nuevo si no existía
-        const destMarker = createAdvancedMarker({
+        const newMarker = createAdvancedMarker({
           position: pt,
           map: googleMap,
-          title: `Ruta: ${order.code}`,
           htmlContent: htmlContent,
+          zIndex: isRoute ? 100 + routeIdx : 10,
         });
 
-        destMarker.addListener("gmp-click", () => {
-          infoWindow.setContent(`<div style="padding: 5px;">Parada ${idx + 1}: <b>${order.code}</b></div>`);
-          infoWindow.open(googleMap, destMarker);
+        newMarker.addListener("gmp-click", () => {
+          if (!isRoute && onSelectOrderForRoute) {
+            onSelectOrderForRoute(order.id);
+          } else if (isRoute) {
+            infoWindow.setContent(`
+              <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
+                <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
+                  Parada ${routeIdx + 1}: ${clientName}
+                </div>
+                <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
+                  Pedido: <span style="font-weight: 600; color: #1a73e8;">#${orderCode}</span>
+                </div>
+              </div>
+            `);
+            infoWindow.open(googleMap, newMarker);
+          }
         });
 
-        routeMarkersDict.current[markerId] = destMarker;
-      }
-    });
-
-    // 2. Dibujar Pedidos Disponibles para Despacho (Pendientes sin chofer y Reintentos Observados)
-    const availableForDispatch = allTodayOrders.filter((o: any) => {
-      if (selectedOrderIds.includes(o.id)) return false;
-      if (o.status === ORDER_STATUS.PENDING && !o.driverId) return true;
-      if (o.status === ORDER_STATUS.OBSERVED) return true;
-      return false;
-    });
-
-    availableForDispatch.forEach((order: any) => {
-      if (order.latitude && order.longitude) {
-        const pt = { lat: Number(order.latitude), lng: Number(order.longitude) };
-        const isObserved = order.status === ORDER_STATUS.OBSERVED;
-        const markerColor = isObserved ? ORDER_STATUS_COLORS.OBSERVED : ORDER_STATUS_COLORS.PENDING;
-        const markerTitle = isObserved
-          ? `Reintento (${order.code}): ${order.reasonText || "Observado previamente"}`
-          : `Pendiente: ${order.code}`;
-
-        const markerId = `available-${order.id}`;
-        currentIds.add(markerId);
-
-        const htmlContent = DESTINATION_MARKER_HTML(markerColor);
-
-        if (routeMarkersDict.current[markerId]) {
-          const container = routeMarkersDict.current[markerId].content as HTMLElement;
-          if (container) container.innerHTML = htmlContent.trim();
-        } else {
-          const unassignedMarker = createAdvancedMarker({
-            position: pt,
-            map: googleMap,
-            title: markerTitle,
-            htmlContent: htmlContent,
-          });
-
-          unassignedMarker.addListener("gmp-click", () => {
-            if (onSelectOrderForRoute) {
-              onSelectOrderForRoute(order.id);
-            }
-          });
-
-          routeMarkersDict.current[markerId] = unassignedMarker;
-        }
+        routeMarkersDict.current[markerId] = newMarker;
       }
     });
 
@@ -422,12 +633,48 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       }
     });
 
-  }, [googleMap, selectedOrderIds, allTodayOrders, onSelectOrderForRoute]);
+    // 4. Dibujar la ruta ("la culebra") entre las paradas del Route Builder (1 -> 2 -> 3...)
+    if (!selectedOrder) {
+      if (selectedOrdersFull.length >= 2) {
+        const routePoints = selectedOrdersFull
+          .filter((o: any) => o.latitude !== null && o.longitude !== null)
+          .map((o: any) => ({ lat: Number(o.latitude), lng: Number(o.longitude) }));
+
+        if (routePoints.length >= 2) {
+          drawMultiStopRoute(routePoints);
+        } else {
+          clearRoute();
+        }
+      } else {
+        clearRoute();
+      }
+    }
+
+  }, [googleMap, selectedOrderIds, allTodayOrders, onSelectOrderForRoute, selectedOrder, mapZoom, drawMultiStopRoute, clearRoute]);
 
   const activeMapId = "DEMO_MAP_ID";
 
   return (
     <div className="relative w-full h-full min-h-[500px]">
+      {selectedOrder && (
+        <div className="absolute top-4 right-4 z-20 bg-white/95 dark:bg-[#1A1A24]/95 backdrop-blur-md border border-blue-200 dark:border-blue-900/60 shadow-xl rounded-xl px-4 py-2 flex items-center gap-3 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+              Siguiendo: #{selectedOrder.code}
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setSelectedOrder(null);
+              if (onClearFocus) onClearFocus();
+            }}
+            className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline cursor-pointer"
+          >
+            Ver todos los pedidos ✕
+          </button>
+        </div>
+      )}
       <GoogleMapView
         mapId={activeMapId}
         onMapLoad={(map) => setGoogleMap(map)}

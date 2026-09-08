@@ -32,6 +32,8 @@ function useDebounce<T>(value: T, delay: number): T {
 import { usePedidosQuery } from "../hooks/usePedidosQueries";
 import { getOrderStatusConfig } from "@/shared/utils/orderStatus.utils";
 import { ORDER_STATUS } from "@/shared/constants/order-status";
+import { getOrderValidity } from "@/shared/utils/orderValidity.utils";
+import { formatLocalDate } from "@/shared/utils/date";
 
 interface OrderTableProps {
   onEdit?: (order: any) => void;
@@ -136,8 +138,8 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
         dot: string;
         iconType: "check" | "link" | "pulse";
       } = {
-        badge: "text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border-indigo-200/80 dark:border-indigo-800/60",
-        dot: "bg-indigo-500",
+        badge: "text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border-blue-200/80 dark:border-blue-800/60",
+        dot: "bg-blue-500",
         iconType: "link",
       };
 
@@ -268,7 +270,7 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
 
         return (
           <div className="inline-flex items-center gap-2 justify-center">
-            <span className="w-6 h-6 rounded-full bg-purple-100/80 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold text-[11px] shrink-0">
+            <span className="w-6 h-6 rounded-full bg-blue-100/80 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-[11px] shrink-0">
               {initial}
             </span>
             <span className="font-medium text-xs text-slate-800 dark:text-slate-200">
@@ -279,7 +281,7 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
       }
     },
     {
-      header: "Estado",
+      header: "Estado Pedido",
       accessorKey: "status",
       meta: { align: "center" },
       cell: (info: any) => {
@@ -298,6 +300,48 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
         return (
           <Badge variant={statusConfig.variant} withDot>
             {statusConfig.label}
+          </Badge>
+        );
+      }
+    },
+    {
+      header: "Plazo / Vencimiento",
+      accessorKey: "dueDate",
+      meta: { align: "center" },
+      cell: (info: any) => {
+        const order = info.row.original;
+        const dueText = order.dueDate ? formatLocalDate(order.dueDate, { format: "short" }) : "Fin del día";
+        const createdText = order.createdAt ? formatLocalDate(order.createdAt, { format: "short" }) : "-";
+
+        return (
+          <div className="flex flex-col items-center justify-center text-center">
+            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+              {dueText}
+            </span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+              Inicio: {createdText}
+            </span>
+          </div>
+        );
+      }
+    },
+    {
+      header: "Vigencia Pedido",
+      id: "validity",
+      meta: { align: "center" },
+      cell: (info: any) => {
+        const order = info.row.original;
+        const validity = getOrderValidity(order.createdAt, order.dueDate);
+        const badgeVariant =
+          validity.status === "FRESH"
+            ? "success"
+            : validity.status === "WARNING"
+            ? "warning"
+            : "danger";
+
+        return (
+          <Badge variant={badgeVariant} withDot>
+            {validity.label}
           </Badge>
         );
       }

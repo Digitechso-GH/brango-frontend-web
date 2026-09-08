@@ -7,11 +7,11 @@ import { ROUTES } from "@/shared/constants/routes";
 import { ROLES } from "@/shared/constants/roles";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { authApi } from "@/features/auth/api/auth.api";
-import { 
-  IconMap2, 
-  IconBox, 
+import {
+  IconMap2,
+  IconBox,
   IconRoute,
-  IconSteeringWheel, 
+  IconSteeringWheel,
   IconSettings,
   IconLogout,
   IconMapPinFilled,
@@ -75,8 +75,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const userRoleLabel = user?.role === ROLES.SYS_ADMIN
     ? "Administrador"
     : user?.role === ROLES.SYS_OPERATOR
-    ? "Operador Despachador"
-    : "Usuario";
+      ? "Operador Despachador"
+      : "Usuario";
 
   if (!hasHydrated) {
     return (
@@ -90,14 +90,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex h-screen bg-slate-50/50 dark:bg-[#13131A] overflow-hidden font-sans">
       {/* Mobile Backdrop */}
       {isMobileSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-900/40 z-40 md:hidden transition-opacity"
           onClick={closeMobileSidebar}
         />
       )}
 
       {/* Sidebar */}
-      <aside 
+      <aside
         className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-[#1A1A24] border-r border-slate-200/80 dark:border-slate-800 transition-all duration-300 ease-in-out md:relative md:translate-x-0
           ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
           ${isSidebarCollapsed ? "md:w-[80px]" : "md:w-64"} w-64
@@ -108,17 +108,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <IconMapPinFilled size={24} className="text-blue-600 dark:text-blue-500 shrink-0" />
             <h1 className="text-xl font-black text-blue-600 tracking-tight shrink-0">Bran<span className="text-slate-900 dark:text-white">Go</span></h1>
           </div>
-          
-          <button 
-            onClick={toggleSidebar} 
+
+          <button
+            onClick={toggleSidebar}
             className="hidden md:flex p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors shrink-0 cursor-pointer"
             title={isSidebarCollapsed ? "Expandir menú" : "Colapsar menú"}
           >
             <IconMenu2 size={20} />
           </button>
 
-          <button 
-            onClick={closeMobileSidebar} 
+          <button
+            onClick={closeMobileSidebar}
             className="md:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors shrink-0 cursor-pointer"
           >
             <IconX size={20} />
@@ -140,11 +140,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       href={item.path}
                       title={isSidebarCollapsed ? item.label : undefined}
                       onClick={() => closeMobileSidebar()}
-                      className={`flex items-center py-2.5 rounded-xl text-sm font-semibold transition-all group overflow-hidden ${
-                        isActive
+                      className={`flex items-center py-2.5 rounded-xl text-sm font-semibold transition-all group overflow-hidden ${isActive
                           ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
                           : "text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
-                      } ${isSidebarCollapsed ? "md:justify-center md:px-0 md:gap-0 px-3 gap-3" : "px-3 gap-3"}`}
+                        } ${isSidebarCollapsed ? "md:justify-center md:px-0 md:gap-0 px-3 gap-3" : "px-3 gap-3"}`}
                     >
                       <span className={`shrink-0 transition-colors ${isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-400"}`}>
                         {item.icon}
@@ -181,7 +180,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Top Nav Header */}
         <header className="h-16 border-b border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#1A1A24] flex items-center justify-between px-4 md:px-8 shrink-0">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={toggleMobileSidebar}
               className="md:hidden p-2 -ml-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
             >
@@ -189,7 +188,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </button>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{pageTitle}</h2>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <button
               onClick={handleLogout}

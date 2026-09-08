@@ -32,6 +32,7 @@ export const useSavePedidoMutation = (orderId?: string, onClose?: () => void, se
         driverId: data.driverId || undefined,
         removeDriver: (data as any).removeDriver || undefined,
         warehouseContact: data.warehouseContact || "",
+        dueDate: data.dueDate ? data.dueDate : null,
       };
 
       if (orderId) {

@@ -29,3 +29,13 @@ export const STATUS_COLORS = ORDER_STATUS_COLORS;
 // 3. Color corporativo oficial de BranGo para unidades / vehículos
 // Confirmado en globals.css (--color-blue-600), icon.svg, logotipos y SVGs
 export const VEHICLE_MARKER_COLOR = "#3D5FFF";
+
+// 4. Estados de Vigencia / Tiempo de Vida del Pedido (Completamente independiente de estados de envío)
+export const ORDER_VALIDITY_COLORS = {
+  FRESH: "#22C55E",    // Verde (0% - 33.3% transcurrido / Recién subido, tiempo óptimo)
+  WARNING: "#F59E0B",  // Amarillo (33.3% - 66.6% transcurrido / Mitad de vigencia)
+  CRITICAL: "#EF4444", // Rojo (>66.6% o vencido / Crítico, a punto de vencer o vencido)
+} as const;
+
+export type OrderValidityColor = typeof ORDER_VALIDITY_COLORS[keyof typeof ORDER_VALIDITY_COLORS];
+

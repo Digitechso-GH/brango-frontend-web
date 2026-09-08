@@ -159,7 +159,7 @@ export const ConfigForm = () => {
         </div>
       </div>
 
-      {/* Mensajes Automáticos Card */}
+      {/* Mensajes Automáticos Card - Deshabilitado / Sin utilidad actual
       <div className="bg-white dark:bg-[#1A1A24] rounded-2xl border border-gray-100 dark:border-[#2D2D3D] shadow-sm p-6 flex items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white">Mensajes automáticos al cliente final</h3>
@@ -167,6 +167,7 @@ export const ConfigForm = () => {
         </div>
         <Toggle checked={eta} onChange={setEta} />
       </div>
+      */}
 
       <div className="flex justify-end mt-4">
         <Button 

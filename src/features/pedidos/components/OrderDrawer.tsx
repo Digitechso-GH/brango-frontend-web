@@ -18,7 +18,8 @@ import {
   IconFileText, 
   IconPhone, 
   IconBuildingWarehouse, 
-  IconMapPin 
+  IconMapPin,
+  IconCalendar
 } from "@tabler/icons-react";
 import { useGoogleMapsLoader } from "@/shared/integrations/google/useGoogleMapsLoader";
 
@@ -60,6 +61,7 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
       latitude: "",
       longitude: "",
       driverId: "",
+      dueDate: "",
     },
   });
 
@@ -178,6 +180,7 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
           latitude: order.latitude !== undefined && order.latitude !== null ? String(order.latitude) : "",
           longitude: order.longitude !== undefined && order.longitude !== null ? String(order.longitude) : "",
           driverId: order.driverId || "",
+          dueDate: order.dueDate ? new Date(order.dueDate).toISOString().slice(0, 10) : "",
         });
       } else {
         setAddressMode("search");
@@ -195,6 +198,7 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
           latitude: "",
           longitude: "",
           driverId: "",
+          dueDate: "",
         });
       }
     }
@@ -261,6 +265,13 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
               {...register("waybill")}
             />
           </div>
+          <Input
+            type="date"
+            label="Fecha de vencimiento (Plazo de entrega)"
+            icon={<IconCalendar size={15} />}
+            error={errors.dueDate?.message?.toString()}
+            {...register("dueDate")}
+          />
         </div>
 
         <hr className="border-t border-slate-100 dark:border-slate-800 my-1" />
