@@ -44,6 +44,16 @@ export function getLocalTodayString(dateInput: Date | string = new Date()): stri
 }
 
 /**
+ * Retorna una instancia de Date anclada a las 23:59:59.999 del día correspondiente
+ * en la zona horaria local del cliente (Perú / Navegador).
+ * Esencial para fechas de vencimiento de jornada operativa de despacho.
+ */
+export function getLocalEndOfDay(dateInput?: string | Date | null): Date {
+  const d = parseLocalDate(dateInput) || new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+}
+
+/**
  * Formatea una fecha para mostrar en la interfaz en español (es-PE).
  * Formatos disponibles:
  * - "short": 31/08/2026

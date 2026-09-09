@@ -1,4 +1,5 @@
 import { ORDER_VALIDITY_COLORS, OrderValidityColor } from "../constants/status-colors";
+import { parseLocalDate, getLocalEndOfDay } from "./date";
 
 export type OrderValidityStatus = "FRESH" | "WARNING" | "CRITICAL";
 
@@ -13,13 +14,13 @@ export interface OrderValidityInfo {
 
 /**
  * Calcula el estado de vigencia del pedido en base a su fecha de creación y vencimiento.
- * Si dueDate es null/indefinido, asigna como fecha efectiva el fin del día de creación (23:59:59)
- * para evitar NaN y reflejar el ciclo operativo de entrega diario.
+ * Si dueDate es null/indefinido, asigna como fecha efectiva el fin del día de creación (23:59:59.999)
+ * en hora local del cliente para reflejar el ciclo operativo de entrega diario.
  * 
  * Regla de tercios (33.3%):
  * - FRESH (Verde #22C55E): 0% - 33.3% del tiempo transcurrido (Vigente / En plazo).
  * - WARNING (Amarillo #F59E0B): 33.3% - 66.6% del tiempo transcurrido (Por vencer).
- * - CRITICAL (Rojo #EF4444): >66.6% del tiempo transcurrido o fecha ya vencida.
+ * - CRITICAL (Rojo #EF4444): >66.6% del tiempo transcurrido (Crítico) o fecha ya vencida (Vencido).
  */
 export function getOrderValidity(
   createdAt: string | Date | null | undefined,
@@ -27,20 +28,12 @@ export function getOrderValidity(
 ): OrderValidityInfo {
   const nowMs = Date.now();
 
-  const startDate = createdAt ? new Date(createdAt) : new Date();
-  const startMs = !isNaN(startDate.getTime()) ? startDate.getTime() : nowMs;
+  const parsedStart = parseLocalDate(createdAt);
+  const startDate = parsedStart || new Date();
+  const startMs = startDate.getTime();
 
-  let endDate: Date;
-  if (dueDate) {
-    const candidate = new Date(dueDate);
-    if (!isNaN(candidate.getTime())) {
-      endDate = candidate;
-    } else {
-      endDate = getEndOfDay(startDate);
-    }
-  } else {
-    endDate = getEndOfDay(startDate);
-  }
+  // Fecha límite efectiva: se ancla a las 23:59:59.999 del día de entrega en hora local
+  const endDate = getLocalEndOfDay(dueDate || startDate);
 
   const endMs = endDate.getTime();
   const totalMs = endMs - startMs;
@@ -92,12 +85,3 @@ export function getOrderValidity(
   };
 }
 
-function getEndOfDay(baseDate: Date): Date {
-  const d = new Date(baseDate.getTime());
-  d.setHours(23, 59, 59, 999);
-  // Si la fecha base ya pasó de las 23:59:59 (mismo día), extender 24h
-  if (d.getTime() <= baseDate.getTime()) {
-    return new Date(baseDate.getTime() + 24 * 60 * 60 * 1000);
-  }
-  return d;
-}

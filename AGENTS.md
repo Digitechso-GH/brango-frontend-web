@@ -13,4 +13,9 @@
    - Mapea y guarda la telemetría GPS indexada únicamente bajo el `driverId` canónico.
 4. **Diseño & Aestética**: Interfaz moderna, glassmorphism, responsive, sin librerías externas innecesarias.
 5. **No adivinar contratos**: Si ocurre un error, corregir el contrato en el backend (NestJS DTOs), nunca parchar en el frontend.
+6. **Manejo Centralizado de Fechas y Zonas Horarias**:
+   - Prohibido hacer `new Date('YYYY-MM-DD')` o parseos ad-hoc directamente en componentes.
+   - Toda manipulación, formateo o interpretación de fechas debe realizarse obligatoriamente mediante el módulo centralizado `src/shared/utils/date.ts` (`formatLocalDate`, `formatLocalTime`, `formatLocalDateTime`, `parseLocalDate`) y `src/shared/utils/orderValidity.utils.ts` (`getOrderValidity`).
+   - Las fechas de entrega / vencimiento se anclan a las `23:59:59.999` de la hora local del cliente para reflejar de forma fidedigna la jornada operativa de despacho.
+
 
