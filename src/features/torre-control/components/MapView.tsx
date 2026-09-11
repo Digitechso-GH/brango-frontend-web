@@ -9,191 +9,22 @@ import { ORDER_STATUS_DETAILS, ORDER_STATUS } from "@/shared/constants/order-sta
 import { ORDER_STATUS_COLORS, VEHICLE_MARKER_COLOR, ORDER_VALIDITY_COLORS } from "@/shared/constants/status-colors";
 import { getOrderValidity } from "@/shared/utils/orderValidity.utils";
 
+import {
+  getClientName,
+  getJitteredPosition,
+  createAdvancedMarker,
+  bindTooltipHover,
+  TRUCK_MARKER_HTML,
+  DESTINATION_MARKER_HTML,
+  VALIDITY_ORDER_MARKER_HTML,
+  cleanupMarkers,
+} from "../utils/mapMarkers.builder";
+
 interface MapViewProps {
   focusedOrder?: any | null;
   selectedOrderIds?: string[];
   onSelectOrderForRoute?: (id: string) => void;
   onClearFocus?: () => void;
-}
-
-const GOOGLE_STYLE_TOOLTIP_HTML = (clientName: string, orderCode: string) => {
-  const cleanCode = String(orderCode || "").replace(/^#/, "");
-  return `
-    <div class="custom-map-tooltip">
-      <div class="custom-map-tooltip-bubble">
-        <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${clientName}
-        </div>
-        <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
-          Pedido: <span style="font-weight: 600; color: #1a73e8;">#${cleanCode}</span>
-        </div>
-      </div>
-      <div class="custom-map-tooltip-arrow"></div>
-    </div>
-  `;
-};
-
-const TRUCK_MARKER_HTML = (color: string, driverName?: string, statusText?: string) => `
-  <div class="marker-wrapper">
-    ${driverName ? `
-      <div class="custom-map-tooltip">
-        <div class="custom-map-tooltip-bubble">
-          <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${driverName}
-          </div>
-          <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
-            ${statusText || "En ruta"}
-          </div>
-        </div>
-        <div class="custom-map-tooltip-arrow"></div>
-      </div>
-    ` : ""}
-    <div style="background: ${color}; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 14px rgba(0,0,0,0.35); cursor: pointer; transition: transform 0.15s ease;">
-      <span style="font-size: 22px; line-height: 1;">🚚</span>
-    </div>
-  </div>
-`;
-
-const DESTINATION_MARKER_HTML = (color: string, label?: string, clientName?: string, orderCode?: string) => `
-  <div class="marker-wrapper">
-    ${clientName && orderCode ? GOOGLE_STYLE_TOOLTIP_HTML(clientName, orderCode) : ""}
-    <div style="background: ${color}; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.15s ease;">
-      <span style="font-size: 16px; font-weight: bold; color: white; line-height: 1;">${label || '📍'}</span>
-    </div>
-  </div>
-`;
-
-const VALIDITY_ORDER_MARKER_HTML = (color: string, clientName: string, orderCode: string) => `
-  <div class="marker-wrapper">
-    ${GOOGLE_STYLE_TOOLTIP_HTML(clientName, orderCode)}
-    <div style="
-      background: ${color};
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 3px solid white;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      transition: transform 0.15s ease;
-    ">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="9"/>
-        <polyline points="12 7 12 12 15 15"/>
-      </svg>
-    </div>
-  </div>
-`;
-
-const cleanMatrizText = (text?: string | null) => {
-  if (!text) return "";
-  return text.replace(/\s*-\s*Matriz/gi, "").replace(/\s*Matriz/gi, "").trim();
-};
-
-const getClientName = (ord: any): string => {
-  if (!ord) return "";
-  const rawName = ord.recipientCustomerType === "INDIVIDUAL" ? ord.recipientName : (ord.customer?.name || ord.recipientName);
-  return cleanMatrizText(rawName || "");
-};
-
-function bindTooltipHover(container: HTMLElement) {
-  const tooltip = container.querySelector(".custom-map-tooltip") as HTMLElement;
-  if (!tooltip) return;
-
-  const show = () => {
-    tooltip.style.opacity = "1";
-    tooltip.style.visibility = "visible";
-    tooltip.style.transform = "translateX(-50%) translateY(0px)";
-  };
-
-  const hide = () => {
-    tooltip.style.opacity = "0";
-    tooltip.style.visibility = "hidden";
-    tooltip.style.transform = "translateX(-50%) translateY(4px)";
-  };
-
-  container.onmouseenter = show;
-  container.onmouseleave = hide;
-  container.onpointerenter = show;
-  container.onpointerleave = hide;
-
-  const wrapper = container.querySelector(".marker-wrapper") as HTMLElement;
-  if (wrapper) {
-    wrapper.onmouseenter = show;
-    wrapper.onmouseleave = hide;
-    wrapper.onpointerenter = show;
-    wrapper.onpointerleave = hide;
-  }
-}
-
-function getJitteredPosition(
-  lat: number,
-  lng: number,
-  indexInGroup: number,
-  totalInGroup: number,
-  zoom: number = 12
-): { lat: number; lng: number } {
-  if (totalInGroup <= 1) return { lat, lng };
-
-  // Calculate degrees needed for a clear visual separation (~28px from center, giving ~18px gap between 38px circles)
-  const safeZoom = Math.max(zoom, 10);
-  const metersPerPixel = (156543.03392 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, safeZoom);
-  const separationMeters = Math.max(28 * metersPerPixel, 30);
-  const radius = separationMeters / 111000;
-
-  const angle = (2 * Math.PI / totalInGroup) * indexInGroup;
-  return {
-    lat: lat + radius * Math.sin(angle),
-    lng: lng + radius * Math.cos(angle) * 1.15,
-  };
-}
-
-function createAdvancedMarker(options: {
-  position: { lat: number; lng: number };
-  map: google.maps.Map;
-  title?: string;
-  htmlContent: string;
-  zIndex?: number;
-}): google.maps.marker.AdvancedMarkerElement {
-  const container = document.createElement("div");
-  container.style.width = "38px";
-  container.style.height = "38px";
-  container.style.position = "relative";
-  container.innerHTML = options.htmlContent.trim();
-  bindTooltipHover(container);
-
-  return new google.maps.marker.AdvancedMarkerElement({
-    position: options.position,
-    map: options.map,
-    title: "", // Do NOT use browser native tooltip
-    content: container,
-    zIndex: options.zIndex ?? 10,
-  });
-}
-
-function createValidityMarker(options: {
-  position: { lat: number; lng: number };
-  map: google.maps.Map;
-  validityColor: string;
-  clientName: string;
-  orderCode: string;
-  zIndex?: number;
-}): google.maps.marker.AdvancedMarkerElement {
-  const container = document.createElement("div");
-  container.style.width = "38px";
-  container.style.height = "38px";
-  container.style.position = "relative";
-  container.innerHTML = VALIDITY_ORDER_MARKER_HTML(options.validityColor, options.clientName, options.orderCode).trim();
-  bindTooltipHover(container);
-
-  return new google.maps.marker.AdvancedMarkerElement({
-    position: options.position,
-    map: options.map,
-    title: "", // Do NOT use browser native tooltip
-    content: container,
-    zIndex: options.zIndex ?? 10,
-  });
 }
 
 export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds = [], onSelectOrderForRoute, onClearFocus }) => {
@@ -252,11 +83,8 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       clearRoute();
     }
 
-    // Limpiar marcadores anteriores
-    markersRef.current.forEach((m) => {
-      if (m.setMap) m.setMap(null);
-      else if ("map" in m) m.map = null;
-    });
+    // Limpiar marcadores anteriores con liberación explícita de referencias
+    cleanupMarkers(markersRef.current);
     markersRef.current = [];
 
     const infoWindow = new google.maps.InfoWindow();
@@ -598,6 +426,10 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       }
     }
 
+    return () => {
+      cleanupMarkers(markersRef.current);
+      markersRef.current = [];
+    };
   }, [googleMap, selectedOrder, locations, drivers, allTodayOrders, timeTick, clearRoute, drawMultiStopRoute]); // REMOVED selectedOrderIds to prevent wiping all drivers
 
   // Efecto dedicado EXCLUSIVAMENTE al Route Builder y pedidos pendientes
@@ -754,6 +586,13 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       }
     }
 
+    return () => {
+      Object.keys(routeMarkersDict.current).forEach((id) => {
+        const m = routeMarkersDict.current[id];
+        if (m) m.map = null;
+      });
+      routeMarkersDict.current = {};
+    };
   }, [googleMap, selectedOrderIds, allTodayOrders, onSelectOrderForRoute, selectedOrder, mapZoom, drawMultiStopRoute, clearRoute]);
 
   const activeMapId = "DEMO_MAP_ID";

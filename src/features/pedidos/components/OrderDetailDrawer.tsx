@@ -25,6 +25,78 @@ import { usePauseOrderMutation, useResumeOrderMutation } from "../hooks/usePedid
 import { toast } from "sonner";
 import { getOrderValidity } from "@/shared/utils/orderValidity.utils";
 import { getLocalTodayString, formatLocalDate, formatLocalTime } from "@/shared/utils/date";
+import { ORDER_EVENT_TYPES } from "../constants/orderEvents.constants";
+
+interface EventConfig {
+  label: (ev: any, assignment: any, order: any) => string;
+  color: string;
+  getSubLabel?: (ev: any, assignment: any, order: any) => string | undefined;
+  isFinal?: boolean;
+}
+
+const EVENT_RENDER_CONFIG: Record<string, EventConfig> = {
+  [ORDER_EVENT_TYPES.REGISTERED]: {
+    label: (_ev, assignment) => {
+      const unitStr = assignment.driver?.unit ? `Unidad ${assignment.driver.unit}` : (assignment.driver?.name || "Chofer");
+      return `Asignado a ${unitStr}`;
+    },
+    color: "gray",
+  },
+  [ORDER_EVENT_TYPES.TRANSIT_STARTED]: {
+    label: () => "En camino",
+    color: "amber",
+  },
+  [ORDER_EVENT_TYPES.WHATSAPP_SENT]: {
+    label: () => "WhatsApp enviado al cliente",
+    color: "amber",
+  },
+  [ORDER_EVENT_TYPES.WHATSAPP_WAREHOUSE_SENT]: {
+    label: () => "WhatsApp enviado a almacén",
+    color: "amber",
+  },
+  [ORDER_EVENT_TYPES.WHATSAPP_FAILED]: {
+    label: () => "Envío a WhatsApp fallido",
+    color: "amber",
+  },
+  [ORDER_EVENT_TYPES.WHATSAPP_WAREHOUSE_FAILED]: {
+    label: () => "Envío a almacén fallido",
+    color: "amber",
+  },
+  [ORDER_EVENT_TYPES.DELIVERED]: {
+    label: () => "Entrega",
+    color: "emerald",
+    isFinal: true,
+  },
+  [ORDER_EVENT_TYPES.OBSERVED]: {
+    label: () => "Observado",
+    color: "red",
+    isFinal: true,
+    getSubLabel: (ev, assignment, order) =>
+      ev.metadata?.reasonText || assignment.reasonText || ev.metadata?.reason || order.reasonText || undefined,
+  },
+  [ORDER_EVENT_TYPES.STOP_GROUPED]: {
+    label: () => "Parada consolidada",
+    color: "gray",
+  },
+  [ORDER_EVENT_TYPES.STOP_UNGROUPED]: {
+    label: () => "Parada desagrupada",
+    color: "gray",
+  },
+  [ORDER_EVENT_TYPES.DRIVER_UNASSIGNED]: {
+    label: () => "Chofer desasignado",
+    color: "gray",
+  },
+  [ORDER_EVENT_TYPES.FORCE_CLOSED_BY_ADMIN]: {
+    label: () => "Cierre forzado por administrador",
+    color: "red",
+    isFinal: true,
+  },
+  [ORDER_EVENT_TYPES.AUTO_CLOSED_EOD]: {
+    label: () => "Cierre automático nocturno",
+    color: "red",
+    isFinal: true,
+  },
+};
 
 interface OrderDetailDrawerProps {
   isOpen: boolean;
@@ -196,47 +268,24 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
       let hasFinalForThisAssignment = false;
 
       for (const ev of sorted) {
-        let label = ev.type;
-        let color = "gray";
-        let subLabel: string | undefined = undefined;
-
-        if (ev.type === "REGISTERED") {
-          const unitStr = assignment.driver?.unit ? `Unidad ${assignment.driver.unit}` : (assignment.driver?.name || "Chofer");
-          label = `Asignado a ${unitStr}`;
-        } else if (ev.type === "TRANSIT_STARTED") {
-          label = "En camino";
-          color = "amber";
-        } else if (ev.type === "WHATSAPP_NOTIFICATION_SENT") {
-          label = "WhatsApp enviado al cliente";
-          color = "amber";
-        } else if (ev.type === "WHATSAPP_WAREHOUSE_NOTIFICATION_SENT") {
-          label = "WhatsApp enviado a almacén";
-          color = "amber";
-        } else if (ev.type === "WHATSAPP_NOTIFICATION_FAILED") {
-          label = "Envío a WhatsApp fallido";
-          color = "amber";
-        } else if (ev.type === "WHATSAPP_WAREHOUSE_NOTIFICATION_FAILED") {
-          label = "Envío a almacén fallido";
-          color = "amber";
-        } else if (ev.type === "DELIVERED") {
-          hasFinalForThisAssignment = true;
-          label = "Entrega";
-          color = "emerald";
-        } else if (ev.type === "OBSERVED") {
-          hasFinalForThisAssignment = true;
-          label = "Observado";
-          color = "red";
-          subLabel = ev.metadata?.reasonText || assignment.reasonText || ev.metadata?.reason || order.reasonText || undefined;
-        } else if (ev.type === "REASSIGNED") {
+        if (ev.type === ORDER_EVENT_TYPES.REASSIGNED) {
           const dateStr = formatLocalDate(ev.timestamp, { format: "long", includeYear: false });
           const actorStr = ev.actor ? `POR ${ev.actor}` : "POR SISTEMA";
           events.push({
             id: ev.id,
             isDivider: true,
             label: `NUEVA REASIGNACIÓN — ${dateStr}`,
-            subLabel: actorStr
+            subLabel: actorStr,
           });
           continue;
+        }
+
+        const config = EVENT_RENDER_CONFIG[ev.type];
+        const label = config ? config.label(ev, assignment, order) : ev.type;
+        const color = config ? config.color : "gray";
+        const subLabel = config?.getSubLabel ? config.getSubLabel(ev, assignment, order) : undefined;
+        if (config?.isFinal) {
+          hasFinalForThisAssignment = true;
         }
 
         events.push({
@@ -245,7 +294,7 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
           subLabel,
           date: ev.timestamp,
           color,
-          icon: <GPSBrand size={14} className="currentColor" />
+          icon: <GPSBrand size={14} className="currentColor" />,
         });
       }
     });
