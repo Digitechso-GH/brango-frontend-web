@@ -504,8 +504,22 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
 
       let htmlContent: string;
       if (isRoute) {
+        // Pedido asignado a la ruta en construcción: se numera secuencialmente con el color oficial de la flota
         htmlContent = DESTINATION_MARKER_HTML(VEHICLE_MARKER_COLOR, `${routeIdx + 1}`, clientName, orderCode);
       } else {
+        /**
+         * [DECISIÓN DE DISEÑO INTENCIONAL - NO MODIFICAR COMO ERROR/BUG]
+         * Criterio de color en Route Builder (Pedidos Disponibles para Despacho):
+         * - Los pedidos disponibles para armar rutas siempre están en estado PENDING (sin chofer) u OBSERVED.
+         * - Si usáramos ORDER_STATUS_COLORS aquí, el mapa mostraría todos los pines en gris monótono (#9CA3AF),
+         *   perdiendo todo valor operativo para el operador logístico.
+         * - Por ello, esta vista usa INTENCIONALMENTE ORDER_VALIDITY_COLORS (SLA / Vigencia con icono de reloj):
+         *   * VERDE (#22C55E): Pedido fresco (0-33.3% tiempo transcurrido).
+         *   * AMARILLO (#F59E0B): Pedido preventivo (33.3-66.6% tiempo transcurrido).
+         *   * ROJO (#EF4444): Pedido crítico próximo a vencer o vencido (>66.6% tiempo transcurrido).
+         * De esta forma, el operador identifica de inmediato qué zonas y pedidos deben incluirse primero en una ruta.
+         * Una vez despachado y en seguimiento activo, el pedido pasa al ciclo de vida de ORDER_STATUS_COLORS (IN_TRANSIT, DELIVERED, etc.).
+         */
         const validity = getOrderValidity(order.createdAt, order.dueDate);
         const markerColor = ORDER_VALIDITY_COLORS[validity.status];
         htmlContent = VALIDITY_ORDER_MARKER_HTML(markerColor, clientName, orderCode);

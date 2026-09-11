@@ -60,6 +60,13 @@ export const DESTINATION_MARKER_HTML = (color: string, label?: string, clientNam
   </div>
 `;
 
+/**
+ * Marcador de Pedido Disponible para Despacho (Route Builder).
+ * NOTA DE ARQUITECTURA: Usa ORDER_VALIDITY_COLORS (SLA de vencimiento: verde/amarillo/rojo)
+ * y un icono de reloj interno en lugar de ORDER_STATUS_COLORS.
+ * Esto permite al operador logístico priorizar visualmente los pedidos urgentes en el mapa
+ * antes de agruparlos en una ruta.
+ */
 export const VALIDITY_ORDER_MARKER_HTML = (color: string, clientName: string, orderCode: string): string => `
   <div class="marker-wrapper">
     ${GOOGLE_STYLE_TOOLTIP_HTML(clientName, orderCode)}
