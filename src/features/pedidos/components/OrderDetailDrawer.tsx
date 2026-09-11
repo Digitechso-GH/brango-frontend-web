@@ -209,8 +209,14 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
         } else if (ev.type === "WHATSAPP_NOTIFICATION_SENT") {
           label = "WhatsApp enviado al cliente";
           color = "amber";
+        } else if (ev.type === "WHATSAPP_WAREHOUSE_NOTIFICATION_SENT") {
+          label = "WhatsApp enviado a almacén";
+          color = "amber";
         } else if (ev.type === "WHATSAPP_NOTIFICATION_FAILED") {
           label = "Envío a WhatsApp fallido";
+          color = "amber";
+        } else if (ev.type === "WHATSAPP_WAREHOUSE_NOTIFICATION_FAILED") {
+          label = "Envío a almacén fallido";
           color = "amber";
         } else if (ev.type === "DELIVERED") {
           hasFinalForThisAssignment = true;
