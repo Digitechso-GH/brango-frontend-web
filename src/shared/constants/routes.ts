@@ -19,6 +19,7 @@ export const ROUTES = {
     ORDERS: "/orders",
     ORDERS_IMPORT: "/orders/import",
     ROUTES: "/routes",
+    ROUTES_SUGGESTED: "/routes/suggested",
     DRIVERS: "/drivers",
     SEDES: "/sedes",
     CLIENTS: "/clients",
