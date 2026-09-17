@@ -29,6 +29,7 @@ export default function PublicTrackingPage() {
   const [order, setOrder] = useState<PublicTrackingData | null>(null);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
 
@@ -42,7 +43,8 @@ export default function PublicTrackingPage() {
   const fetchTracking = async () => {
     if (!code) return;
     try {
-      setIsLoading(true);
+      if (!order) setIsLoading(true);
+      else setIsRefetching(true);
       setErrorMessage(null);
       const data = await trackingApi.getPublicTracking(code);
       setOrder(data);
@@ -61,6 +63,7 @@ export default function PublicTrackingPage() {
       );
     } finally {
       setIsLoading(false);
+      setIsRefetching(false);
     }
   };
 
@@ -245,10 +248,11 @@ export default function PublicTrackingPage() {
               </span>
               <button 
                 onClick={fetchTracking}
-                className="p-2 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors ml-2"
+                disabled={isRefetching}
+                className={`p-2 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors ml-2 ${isRefetching ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title="Actualizar estado"
               >
-                <IconRefresh size={18} />
+                <IconRefresh size={18} className={isRefetching ? 'animate-spin' : ''} />
               </button>
             </div>
           )}

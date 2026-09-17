@@ -42,6 +42,29 @@ export interface PublicTrackingData {
 export const trackingApi = {
   getPublicTracking: async (code: string): Promise<PublicTrackingData> => {
     const res = await axios.get(`${apiUrl}${API_ENDPOINTS.PUBLIC_TRACKING}/${encodeURIComponent(code)}`);
-    return res.data.data ?? res.data;
+    const payload = res.data.data ?? res.data;
+
+    // El backend SIEMPRE devuelve la estructura anidada { order: {...}, driver: {...} }
+    // Mapeamos estrictamente a la interfaz plana PublicTrackingData del frontend
+    return {
+      orderId: payload.order.id,
+      code: payload.order.code,
+      publicTrackingToken: payload.order.publicTrackingToken,
+      waybill: payload.order.waybill,
+      status: payload.order.status,
+      recipientName: payload.order.recipientName,
+      address: payload.order.formattedAddress || payload.order.rawAddress,
+      destinationLatitude: payload.order.latitude,
+      destinationLongitude: payload.order.longitude,
+      originAddress: payload.originBranch?.address,
+      originLatitude: payload.originBranch?.latitude,
+      originLongitude: payload.originBranch?.longitude,
+      driver: payload.driver,
+      driverLocation: payload.driverLocation,
+      events: payload.events,
+      groupedOrders: [],
+      createdAt: payload.order.createdAt,
+      updatedAt: payload.order.updatedAt || payload.order.createdAt,
+    };
   },
 };

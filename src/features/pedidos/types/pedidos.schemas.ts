@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 export const OrderSchema = z.object({
   id: z.string().uuid(),
@@ -69,7 +69,7 @@ export const DriverLocationSchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
   event: z.string(),
-  routeAssignmentId: z.string().uuid().optional(), // Omitido cuando no hay ruta activa (.optional())
+  routeAssignmentId: z.string().uuid().nullable().optional(), // Omitido cuando no hay ruta activa (.optional())
   updatedAt: z.string().or(z.date()),
 });
 
