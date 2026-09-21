@@ -129,16 +129,20 @@ export function getJitteredPosition(
 ): { lat: number; lng: number } {
   if (totalInGroup <= 1) return { lat, lng };
 
-  // Calculate degrees needed for a clear visual separation (~28px from center, giving ~18px gap between 38px circles)
-  const safeZoom = Math.max(zoom, 10);
-  const metersPerPixel = (156543.03392 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, safeZoom);
-  const separationMeters = Math.max(28 * metersPerPixel, 30);
-  const radius = separationMeters / 111000;
+  // Offset visual sutil (~14px desde el centro) para mantener los pedidos agrupados junto al local
+  const safeZoom = Math.min(Math.max(zoom, 10), 20);
+  const cosLat = Math.cos((lat * Math.PI) / 180);
+  const metersPerPixel = (156543.03392 * cosLat) / Math.pow(2, safeZoom);
+  
+  // Distancia proporcional al zoom visual, sin forzar mínimos artificiales de 30 metros
+  const offsetMeters = 14 * metersPerPixel;
+  const dLat = offsetMeters / 111320;
+  const dLng = offsetMeters / (111320 * (cosLat || 1));
 
   const angle = ((2 * Math.PI) / totalInGroup) * indexInGroup;
   return {
-    lat: lat + radius * Math.sin(angle),
-    lng: lng + radius * Math.cos(angle) * 1.15,
+    lat: lat + dLat * Math.sin(angle),
+    lng: lng + dLng * Math.cos(angle),
   };
 }
 
