@@ -155,7 +155,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
         htmlContent: TRUCK_MARKER_HTML(posInfo.statusColor, posInfo.name, posInfo.lastSeenText),
       });
 
-      truckMarker.addListener("gmp-click", () => {
+      truckMarker.addEventListener("gmp-click", () => {
         infoWindow.setContent(`
           <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
             <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
@@ -264,7 +264,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
                 htmlContent: DESTINATION_MARKER_HTML(statusDetail.color, `${idx + 1}`, clienteNombre, actOrd.code),
               });
 
-              destMarker.addListener("gmp-click", () => {
+              destMarker.addEventListener("gmp-click", () => {
                 infoWindow.setContent(`
                   <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
                     <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
@@ -297,7 +297,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
               zIndex: 100,
             });
 
-            destMarker.addListener("gmp-click", () => {
+            destMarker.addEventListener("gmp-click", () => {
               infoWindow.setContent(`
                 <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
                   <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
@@ -347,7 +347,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
             zIndex: 100,
           });
 
-          destMarker.addListener("gmp-click", () => {
+          destMarker.addEventListener("gmp-click", () => {
             infoWindow.setContent(`
               <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
                 <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
@@ -398,7 +398,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
           zIndex: 100,
         });
 
-        destMarker.addListener("gmp-click", () => {
+        destMarker.addEventListener("gmp-click", () => {
           infoWindow.setContent(`
             <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
               <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
@@ -544,7 +544,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
           zIndex: isRoute ? 100 + routeIdx : 10,
         });
 
-        newMarker.addListener("gmp-click", () => {
+        newMarker.addEventListener("gmp-click", () => {
           if (!isRoute && onSelectOrderForRoute) {
             onSelectOrderForRoute(order.id);
           } else if (isRoute) {

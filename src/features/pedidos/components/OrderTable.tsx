@@ -189,7 +189,7 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
             <span className="font-bold text-xs text-slate-900 dark:text-white">
               #{row.code || info.getValue()}
             </span>
-            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 whitespace-nowrap">
               {row.waybill ? `#${row.waybill}` : "sin guía"}
             </span>
             {groupInfo && (
@@ -261,20 +261,27 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
       accessorFn: (row: any) => row.driver?.name || "No asignado",
       meta: { align: "center" },
       cell: (info: any) => {
-        const driverName = info.row.original.driver?.name;
+        const driverName = info.row.original.driver?.name as string;
         if (!driverName) {
           return <span className="text-xs italic text-slate-400 font-normal">No asignado</span>;
         }
 
         const initial = driverName.charAt(0).toUpperCase();
+        
+        // Acortar nombres muy largos (ej. tomar solo primer nombre y primer apellido)
+        const nameParts = driverName.trim().split(/\s+/);
+        let shortName = driverName;
+        if (nameParts.length > 2) {
+          shortName = `${nameParts[0]} ${nameParts[1]}`;
+        }
 
         return (
-          <div className="inline-flex items-center gap-2 justify-center">
+          <div className="flex items-center gap-2 justify-center max-w-[140px] mx-auto" title={driverName}>
             <span className="w-6 h-6 rounded-full bg-blue-100/80 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-[11px] shrink-0">
               {initial}
             </span>
-            <span className="font-medium text-xs text-slate-800 dark:text-slate-200">
-              {driverName}
+            <span className="font-medium text-xs text-slate-800 dark:text-slate-200 truncate">
+              {shortName}
             </span>
           </div>
         );

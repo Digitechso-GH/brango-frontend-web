@@ -100,20 +100,13 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
       return;
     }
 
-    // 2. Si es una URL corta sin coordenadas explícitas en texto, usar Geocoder
+    // 2. Si es una URL (corta o de Google Maps sin coordenadas explícitas en texto):
     if (val.includes("http") || val.includes("goo.gl") || val.includes("maps")) {
       setPredictions([]);
-      if (window.google && window.google.maps && window.google.maps.Geocoder) {
-        const geocoder = new window.google.maps.Geocoder();
-        geocoder.geocode({ address: val }, (results, status) => {
-          if (status === "OK" && results && results[0]) {
-            const loc = results[0].geometry.location;
-            setValue("latitude", loc.lat().toString());
-            setValue("longitude", loc.lng().toString());
-            setValue("formattedAddress", results[0].formatted_address);
-          }
-        });
-      }
+      // Limpiar coordenadas previas para evitar arrastrar datos obsoletos
+      setValue("latitude", "");
+      setValue("longitude", "");
+      setValue("formattedAddress", "");
       return;
     }
 
@@ -408,11 +401,15 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
                 </div>
               )}
             </div>
-            {watch("latitude") && watch("longitude") && (
+            {watch("latitude") && watch("longitude") ? (
               <p className="text-xs font-normal text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5 ml-0.5">
                 ✓ Ubicación confirmada (Lat: {Number(watch("latitude")).toFixed(4)}, Lng: {Number(watch("longitude")).toFixed(4)})
               </p>
-            )}
+            ) : addressMode === "url" && watch("rawAddress")?.startsWith("http") ? (
+              <p className="text-xs font-normal text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-0.5 ml-0.5">
+                📍 Enlace de Google Maps detectado (Se geolocalizará automáticamente al guardar)
+              </p>
+            ) : null}
             {errors.rawAddress?.message && (
               <p className="text-xs font-normal text-red-500 mt-0.5 ml-0.5">{errors.rawAddress.message?.toString()}</p>
             )}
