@@ -79,7 +79,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
   useEffect(() => {
     if (!googleMap) return;
 
-    if (selectedOrder) {
+    if (selectedOrder && selectedOrderIds.length < 2) {
       clearRoute();
     }
 
@@ -525,6 +525,27 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
         htmlContent = VALIDITY_ORDER_MARKER_HTML(markerColor, clientName, orderCode);
       }
 
+      const handleMarkerAction = () => {
+        if (!isRoute && onSelectOrderForRoute) {
+          onSelectOrderForRoute(order.id);
+        } else if (isRoute) {
+          infoWindow.setContent(`
+            <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
+              <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
+                Parada ${routeIdx + 1}: ${clientName}
+              </div>
+              <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
+                Pedido: <span style="font-weight: 600; color: #1a73e8;">#${orderCode}</span>
+              </div>
+            </div>
+          `);
+          const targetMarker = routeMarkersDict.current[markerId];
+          if (targetMarker) {
+            infoWindow.open(googleMap, targetMarker);
+          }
+        }
+      };
+
       if (routeMarkersDict.current[markerId]) {
         const m = routeMarkersDict.current[markerId];
         if (m.position && (m.position.lat !== pt.lat || m.position.lng !== pt.lng)) {
@@ -535,6 +556,10 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
         if (container) {
           container.innerHTML = htmlContent.trim();
           bindTooltipHover(container);
+          container.onclick = (e) => {
+            e.stopPropagation();
+            handleMarkerAction();
+          };
         }
       } else {
         const newMarker = createAdvancedMarker({
@@ -544,22 +569,16 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
           zIndex: isRoute ? 100 + routeIdx : 10,
         });
 
+        const container = newMarker.content as HTMLElement;
+        if (container) {
+          container.onclick = (e) => {
+            e.stopPropagation();
+            handleMarkerAction();
+          };
+        }
+
         newMarker.addEventListener("gmp-click", () => {
-          if (!isRoute && onSelectOrderForRoute) {
-            onSelectOrderForRoute(order.id);
-          } else if (isRoute) {
-            infoWindow.setContent(`
-              <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
-                <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
-                  Parada ${routeIdx + 1}: ${clientName}
-                </div>
-                <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
-                  Pedido: <span style="font-weight: 600; color: #1a73e8;">#${orderCode}</span>
-                </div>
-              </div>
-            `);
-            infoWindow.open(googleMap, newMarker);
-          }
+          handleMarkerAction();
         });
 
         routeMarkersDict.current[markerId] = newMarker;
@@ -577,14 +596,17 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
 
     // 4. Dibujar la ruta ("la culebra") entre las paradas del Route Builder (1 -> 2 -> 3...)
     // Solo cuando los pedidos de la ruta cambien efectivamente, para no recalcular polilíneas durante el zoom
-    if (!selectedOrder) {
+    if (!selectedOrder || selectedOrdersFull.length >= 2) {
       const currentRouteKey = selectedOrdersFull.map((o: any) => o.id).join(",");
       if (selectedOrdersFull.length >= 2) {
         if (lastDrawnRouteIdsRef.current !== currentRouteKey) {
           lastDrawnRouteIdsRef.current = currentRouteKey;
           const routePoints = selectedOrdersFull
             .filter((o: any) => o.latitude !== null && o.longitude !== null)
-            .map((o: any) => ({ lat: Number(o.latitude), lng: Number(o.longitude) }));
+            .map((o: any) => {
+              const item = visibleItems.find((v) => v.order.id === o.id && v.isRoute);
+              return item ? getPos(item) : { lat: Number(o.latitude), lng: Number(o.longitude) };
+            });
 
           if (routePoints.length >= 2) {
             drawMultiStopRoute(routePoints);

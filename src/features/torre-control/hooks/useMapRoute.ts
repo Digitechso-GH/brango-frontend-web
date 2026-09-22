@@ -34,8 +34,17 @@ export const useMapRoute = (map: google.maps.Map | null) => {
         const origin = points[i];
         const destination = points[i + 1];
 
-        // Evitar llamar Directions si el origen y destino son prácticamente idénticos
+        // Si el origen y destino son prácticamente idénticos (ej. pedidos en el mismo edificio), trazar conexión directa
         if (Math.abs(origin.lat - destination.lat) < 0.00005 && Math.abs(origin.lng - destination.lng) < 0.00005) {
+          const polyline = new google.maps.Polyline({
+            path: [origin, destination],
+            geodesic: true,
+            strokeColor: VEHICLE_MARKER_COLOR,
+            strokeOpacity: 0.85,
+            strokeWeight: 4,
+            map: map,
+          });
+          activePolylinesRef.current.push(polyline);
           continue;
         }
 
