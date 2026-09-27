@@ -348,7 +348,7 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-slate-600 dark:text-slate-400 ml-0.5 select-none">
-                Dirección de entrega *
+                Dirección de entrega <span className="text-red-500">*</span>
               </label>
               <button
                 type="button"
