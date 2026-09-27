@@ -43,17 +43,17 @@ export const orderSchema = z.object({
     }
   }
   
-  // if (data.warehouseContact && data.recipientPhone) {
-  //   const commercial = data.warehouseContact.replace(/\D/g, "");
-  //   const client = data.recipientPhone.replace(/\D/g, "");
-  //   if (commercial === client) {
-  //     ctx.addIssue({
-  //       code: z.ZodIssueCode.custom,
-  //       path: ["warehouseContact"],
-  //       message: "El contacto comercial no puede ser igual al contacto del cliente",
-  //     });
-  //   }
-  // }
+  if (data.warehouseContact && data.recipientPhone) {
+    const commercial = data.warehouseContact.replace(/\D/g, "");
+    const client = data.recipientPhone.replace(/\D/g, "");
+    if (commercial === client) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["warehouseContact"],
+        message: "El contacto comercial no puede ser igual al contacto del cliente",
+      });
+    }
+  }
 });
 
 export type OrderFormData = z.infer<typeof orderSchema>;
