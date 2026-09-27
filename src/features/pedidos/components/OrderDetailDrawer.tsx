@@ -51,7 +51,7 @@ const EVENT_RENDER_CONFIG: Record<string, EventConfig> = {
     color: "amber",
   },
   [ORDER_EVENT_TYPES.WHATSAPP_WAREHOUSE_SENT]: {
-    label: () => "WhatsApp enviado a almacén",
+    label: () => "WhatsApp enviado a comercial",
     color: "amber",
   },
   [ORDER_EVENT_TYPES.WHATSAPP_FAILED]: {
@@ -59,7 +59,7 @@ const EVENT_RENDER_CONFIG: Record<string, EventConfig> = {
     color: "amber",
   },
   [ORDER_EVENT_TYPES.WHATSAPP_WAREHOUSE_FAILED]: {
-    label: () => "Envío a almacén fallido",
+    label: () => "Envío a comercial fallido",
     color: "amber",
   },
   [ORDER_EVENT_TYPES.DELIVERED]: {
@@ -432,9 +432,9 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
               </span>
             </div>
 
-            {/* Contacto Almacén */}
+            {/* Contacto Comercial */}
             <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Contacto almacén</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Contacto comercial</span>
               <span className="text-xs font-medium text-slate-900 dark:text-white text-right">
                 {order.warehouseContact || "-"}
               </span>

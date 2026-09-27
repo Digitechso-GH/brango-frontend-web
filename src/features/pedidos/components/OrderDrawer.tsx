@@ -329,7 +329,7 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
               {...register("recipientPhone")}
             />
             <Input
-              label="Contacto almacén *"
+              label="Contacto comercial *"
               placeholder="962 854 129"
               icon={<IconBuildingWarehouse size={15} />}
               error={errors.warehouseContact?.message?.toString()}

@@ -13,7 +13,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       <div className="w-full flex flex-col gap-1">
         {label && (
           <label className="text-xs font-medium text-slate-600 dark:text-slate-400 ml-0.5 select-none">
-            {label}
+            {typeof label === "string" && label.includes("*") ? (
+              <>
+                {label.split("*")[0]}
+                <span className="text-red-500">*</span>
+                {label.split("*")[1]}
+              </>
+            ) : (
+              label
+            )}
           </label>
         )}
         <div className="relative w-full">

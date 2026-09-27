@@ -12,7 +12,7 @@ export const orderSchema = z.object({
 
   recipientPhone: z.string().min(7, "El contacto del cliente es obligatorio (mín. 7 dígitos)"),
   recipientEmail: z.string().optional(),
-  warehouseContact: z.string().min(7, "El contacto de almacén es obligatorio (mín. 7 dígitos)"),
+  warehouseContact: z.string().min(7, "El contacto comercial es obligatorio (mín. 7 dígitos)"),
 
   // Ubicación / Maps
   rawAddress: z.string().min(5, "La dirección de entrega o enlace de Maps es obligatorio"),
@@ -40,6 +40,18 @@ export const orderSchema = z.object({
           message: "El DNI debe tener exactamente 8 dígitos numéricos",
         });
       }
+    }
+  }
+  
+  if (data.warehouseContact && data.recipientPhone) {
+    const commercial = data.warehouseContact.replace(/\D/g, "");
+    const client = data.recipientPhone.replace(/\D/g, "");
+    if (commercial === client) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["warehouseContact"],
+        message: "El contacto comercial no puede ser igual al contacto del cliente",
+      });
     }
   }
 });
