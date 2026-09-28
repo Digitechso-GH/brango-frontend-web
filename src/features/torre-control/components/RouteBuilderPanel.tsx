@@ -53,7 +53,16 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   const allOrders = ordersResponse?.data || [];
 
   const pendingOrders = allOrders.filter((o: any) => {
-    if (o.status === ORDER_STATUS.OBSERVED) return true;
+    if (o.status === ORDER_STATUS.OBSERVED) {
+      const latestAssignment = o.assignments?.[0];
+      if (latestAssignment && latestAssignment.date) {
+        const assignmentDateStr = getLocalTodayString(latestAssignment.date);
+        if (assignmentDateStr === todayStr) {
+          return false; // Ocultar observados del mismo día (no reasignables hoy)
+        }
+      }
+      return true;
+    }
     if (o.driverId) return false;
     return o.status === ORDER_STATUS.PENDING;
   });

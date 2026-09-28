@@ -8,6 +8,7 @@ import { useDriversQuery, usePedidosTodayQuery, useSedesQuery } from "@/features
 import { ORDER_STATUS_DETAILS, ORDER_STATUS } from "@/shared/constants/order-status";
 import { ORDER_STATUS_COLORS, VEHICLE_MARKER_COLOR, ORDER_VALIDITY_COLORS } from "@/shared/constants/status-colors";
 import { getOrderValidity } from "@/shared/utils/orderValidity.utils";
+import { getLocalTodayString } from "@/shared/utils/date";
 
 import {
   getClientName,
@@ -453,8 +454,17 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       ? []
       : allTodayOrders.filter((o: any) => {
           if (selectedOrderIds.includes(o.id)) return false;
+          if (o.status === ORDER_STATUS.OBSERVED) {
+            const latestAssignment = o.assignments?.[0];
+            if (latestAssignment && latestAssignment.date) {
+              const assignmentDateStr = getLocalTodayString(latestAssignment.date);
+              if (assignmentDateStr === getLocalTodayString()) {
+                return false; // No mostrar observados del mismo día
+              }
+            }
+            return true;
+          }
           if (o.status === ORDER_STATUS.PENDING && !o.driverId) return true;
-          if (o.status === ORDER_STATUS.OBSERVED) return true;
           return false;
         });
 
