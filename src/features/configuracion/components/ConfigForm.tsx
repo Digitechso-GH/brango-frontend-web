@@ -58,12 +58,12 @@ export const ConfigForm = () => {
       // 1. Pedir URL firmada al backend (usamos clave estática para que R2 la sobreescriba y no se acumule)
       const extension = file.name.split('.').pop();
       const res = await api.post(`${API_ENDPOINTS.ORDERS}/presigned-url`, {
-        key: `company-logo-current.${extension}`,
+        key: `config/logos/company-logo-current.${extension}`, // Carpeta organizada
         contentType: file.type,
       });
       const { uploadUrl, publicUrl } = res.data.data;
 
-      // 2. Subir directamente a Cloudflare R2 usando raw axios
+      // 2. Subir directamente a Amazon S3 usando raw axios
       await axios.put(uploadUrl, file, {
         headers: {
           'Content-Type': file.type
@@ -109,7 +109,7 @@ export const ConfigForm = () => {
           <p className="text-xs text-gray-500 mb-2">Sube una imagen para acompañar las notificaciones enviadas a los clientes.</p>
           <div className="flex items-center gap-4">
             <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 dark:bg-[#2D2D3D] dark:hover:bg-[#3D3D4D] text-sm font-semibold py-2 px-4 rounded-lg transition-colors text-gray-700 dark:text-gray-200">
-              {uploading ? "Subiendo a Cloudflare..." : "Seleccionar Imagen"}
+              {uploading ? "Subiendo imagen..." : "Seleccionar Imagen"}
               <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
             </label>
             {whatsappImage && (
