@@ -14,7 +14,7 @@ import { handleBackendErrors } from "@/shared/utils/handleBackendErrors";
 
 const driverSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
-  email: z.string().email("El correo electrónico no es válido"),
+  email: z.string().trim().toLowerCase().email("El correo electrónico no es válido"),
   phone: z.string().min(7, "El teléfono debe tener al menos 7 dígitos"),
   unit: z.string().min(4, "La placa/unidad debe tener al menos 4 caracteres"),
   password: z.string().optional(),
