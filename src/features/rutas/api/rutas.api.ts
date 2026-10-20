@@ -68,6 +68,7 @@ export interface RouteDetail {
 export const rutasApi = {
   getRoutes: async (params?: {
     date?: string;
+    fromDate?: string;
     driverId?: string;
     status?: string;
     page?: number;
@@ -96,6 +97,11 @@ export const rutasApi = {
 
   deleteRoute: async (id: string) => {
     const res = await api.delete(`${API_ENDPOINTS.ROUTES}/${id}`);
+    return res.data.data ?? res.data;
+  },
+
+  updateRoute: async (id: string, payload: { name?: string; driverId?: string; date?: string; assignments?: { orderId: string }[] }) => {
+    const res = await api.patch(`${API_ENDPOINTS.ROUTES}/${id}`, payload);
     return res.data.data ?? res.data;
   },
 };

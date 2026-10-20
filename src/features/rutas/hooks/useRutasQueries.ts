@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 export const useRoutesQuery = (params?: {
   date?: string;
+  fromDate?: string;
   driverId?: string;
   status?: string;
   page?: number;

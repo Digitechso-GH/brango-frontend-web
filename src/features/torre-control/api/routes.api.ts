@@ -6,4 +6,8 @@ export const routesApi = {
     const res = await api.post(API_ENDPOINTS.ROUTES, payload);
     return res.data.data ?? res.data;
   },
+  updateRoute: async (id: string, payload: { name?: string; driverId?: string; date?: string; assignments?: { orderId: string }[] }) => {
+    const res = await api.patch(`${API_ENDPOINTS.ROUTES}/${id}`, payload);
+    return res.data.data ?? res.data;
+  },
 };

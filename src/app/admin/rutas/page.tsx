@@ -27,6 +27,7 @@ import {
   IconFilter,
   IconRefresh,
   IconEye,
+  IconEdit,
   IconTrash,
   IconX,
   IconBox,
@@ -38,9 +39,10 @@ import {
   IconLink,
   IconSearch
 } from "@tabler/icons-react";
-import { formatLocalDate } from "@/shared/utils/date";
+import { formatLocalDate, getLocalTodayString } from "@/shared/utils/date";
 
 export default function RutasPage() {
+  const todayStr = getLocalTodayString();
   const [search, setSearch] = useState<string>("");
   // Filtros comentados para fase futura
   // const [selectedDate, setSelectedDate] = useState<string>("");
@@ -330,7 +332,7 @@ export default function RutasPage() {
                       </td>
 
                       <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-1.5 w-20 mx-auto">
+                        <div className="flex items-center justify-center gap-1.5 w-24 mx-auto">
                           <button
                             onClick={() => setSelectedRouteId(route.id)}
                             className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
@@ -338,6 +340,16 @@ export default function RutasPage() {
                           >
                             <IconEye size={18} />
                           </button>
+
+                          {route.status === ROUTE_STATUS.PENDING && getLocalTodayString(route.date) >= todayStr && (
+                            <Link
+                              href={`/admin/torre-control?editRouteId=${route.id}`}
+                              className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
+                              title="Editar ruta en Torre de Control"
+                            >
+                              <IconEdit size={18} />
+                            </Link>
+                          )}
 
                           {isDeletable ? (
                             <button
@@ -368,7 +380,7 @@ export default function RutasPage() {
         title={routeDetail?.name || (routeDetail?.sequenceIndex ? `Ruta #${routeDetail.sequenceIndex}` : "Detalle de Ruta")}
         subtitle={routeDetail?.driver?.user?.name ? `Chofer: ${routeDetail.driver.user.name}${routeDetail.driver.unit ? ` (${routeDetail.driver.unit})` : ""}` : undefined}
         footer={
-          <div className="flex justify-end w-full">
+          <div className="flex items-center justify-end w-full">
             <Button
               variant="outline"
               size="sm"

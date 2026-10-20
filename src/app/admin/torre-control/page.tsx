@@ -1,13 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { StatsSummary } from "@/features/torre-control/components/StatsSummary";
 import { RouteBuilderPanel } from "@/features/torre-control/components/RouteBuilderPanel";
 import { OrderSideList } from "@/features/torre-control/components/OrderSideList";
 import { MapView } from "@/features/torre-control/components/MapView";
 import { OrderDetailDrawer } from "@/features/pedidos/components/OrderDetailDrawer";
 
-export default function TorreControlPage() {
+function TorreControlContent() {
+  const searchParams = useSearchParams();
+  const editRouteId = searchParams.get("editRouteId");
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | undefined>();
   const [focusedOrder, setFocusedOrder] = useState<any | null>(null);
@@ -64,6 +68,8 @@ export default function TorreControlPage() {
                 onRemoveOrder={handleRemoveOrderFromRoute}
                 onReorder={handleReorder}
                 onRouteSaved={handleRouteSaved}
+                onSetSelectedOrders={setSelectedOrderIds}
+                initialRouteId={editRouteId}
               />
             </div>
           </div>
@@ -80,5 +86,13 @@ export default function TorreControlPage() {
         orderId={activeOrderId}
       />
     </div>
+  );
+}
+
+export default function TorreControlPage() {
+  return (
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center p-12 text-xs text-slate-400">Cargando Torre de Control...</div>}>
+      <TorreControlContent />
+    </Suspense>
   );
 }
