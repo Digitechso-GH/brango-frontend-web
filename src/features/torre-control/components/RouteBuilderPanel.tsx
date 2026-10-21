@@ -134,6 +134,13 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
         return;
       }
 
+      if (detail.status !== ROUTE_STATUS.PENDING) {
+        toast.warning("Esta ruta ya fue iniciada por el chofer y ya no puede ser editada.");
+        refetchRoutes();
+        handleBackToList();
+        return;
+      }
+
       setEditingRouteId(detail.id);
       setEditingRouteSequence(detail.sequenceIndex);
       setRouteName(detail.name || "");
