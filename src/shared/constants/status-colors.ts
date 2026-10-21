@@ -35,6 +35,7 @@ export const ORDER_VALIDITY_COLORS = {
   FRESH: "#22C55E",    // Verde (0% - 33.3% transcurrido / Recién subido, tiempo óptimo)
   WARNING: "#F59E0B",  // Amarillo (33.3% - 66.6% transcurrido / Mitad de vigencia)
   CRITICAL: "#EF4444", // Rojo (>66.6% o vencido / Crítico, a punto de vencer o vencido)
+  DELIVERED: "#22C55E", // Verde (Pedido entregado con éxito)
 } as const;
 
 export type OrderValidityColor = typeof ORDER_VALIDITY_COLORS[keyof typeof ORDER_VALIDITY_COLORS];

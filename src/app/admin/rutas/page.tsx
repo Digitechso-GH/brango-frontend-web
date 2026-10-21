@@ -277,6 +277,7 @@ export default function RutasPage() {
                 {routes.map((route) => {
                   const statusConf = ROUTE_STATUS_DETAILS[route.status] || ROUTE_STATUS_DETAILS.PENDING;
                   const isDeletable = route.status === ROUTE_STATUS.PENDING || route.ordersCount === 0;
+                  const isEditable = route.status === ROUTE_STATUS.PENDING && getLocalTodayString(route.date) >= todayStr;
 
                   return (
                     <tr
@@ -341,7 +342,7 @@ export default function RutasPage() {
                             <IconEye size={18} />
                           </button>
 
-                          {route.status === ROUTE_STATUS.PENDING && getLocalTodayString(route.date) >= todayStr && (
+                          {isEditable ? (
                             <Link
                               href={`/admin/torre-control?editRouteId=${route.id}`}
                               className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
@@ -349,6 +350,18 @@ export default function RutasPage() {
                             >
                               <IconEdit size={18} />
                             </Link>
+                          ) : (
+                            <button
+                              disabled
+                              className="w-8 h-8 flex items-center justify-center text-slate-400 opacity-25 pointer-events-none rounded-lg"
+                              title={
+                                route.status !== ROUTE_STATUS.PENDING
+                                  ? "Solo se pueden editar rutas en estado Pendiente"
+                                  : "Solo se pueden editar rutas de hoy o fechas futuras"
+                              }
+                            >
+                              <IconEdit size={18} />
+                            </button>
                           )}
 
                           {isDeletable ? (
@@ -360,7 +373,13 @@ export default function RutasPage() {
                               <IconTrash size={18} />
                             </button>
                           ) : (
-                            <div className="w-8 h-8" />
+                            <button
+                              disabled
+                              className="w-8 h-8 flex items-center justify-center text-slate-400 opacity-25 pointer-events-none rounded-lg"
+                              title="Solo se pueden eliminar rutas en estado Pendiente o vacías"
+                            >
+                              <IconTrash size={18} />
+                            </button>
                           )}
                         </div>
                       </td>

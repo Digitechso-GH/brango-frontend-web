@@ -338,9 +338,9 @@ export const OrderTable = ({ onEdit, onCreate, onImportExcel }: OrderTableProps)
       meta: { align: "center" },
       cell: (info: any) => {
         const order = info.row.original;
-        const validity = getOrderValidity(order.createdAt, order.dueDate);
+        const validity = getOrderValidity(order.createdAt, order.dueDate, order.status);
         const badgeVariant =
-          validity.status === "FRESH"
+          validity.status === "DELIVERED" || validity.status === "FRESH"
             ? "success"
             : validity.status === "WARNING"
             ? "warning"

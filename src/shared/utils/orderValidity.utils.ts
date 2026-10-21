@@ -1,7 +1,7 @@
 import { ORDER_VALIDITY_COLORS, OrderValidityColor } from "../constants/status-colors";
 import { parseLocalDate, getLocalEndOfDay } from "./date";
 
-export type OrderValidityStatus = "FRESH" | "WARNING" | "CRITICAL";
+export type OrderValidityStatus = "FRESH" | "WARNING" | "CRITICAL" | "DELIVERED";
 
 export interface OrderValidityInfo {
   status: OrderValidityStatus;
@@ -14,6 +14,7 @@ export interface OrderValidityInfo {
 
 /**
  * Calcula el estado de vigencia del pedido en base a su fecha de creación y vencimiento.
+ * Si el pedido ya ha sido entregado (DELIVERED), su ciclo de vida concluyó con éxito y retorna estado "DELIVERED" (Entregado).
  * Si dueDate es null/indefinido, asigna como fecha efectiva el fin del día de creación (23:59:59.999)
  * en hora local del cliente para reflejar el ciclo operativo de entrega diario.
  * 
@@ -21,20 +22,30 @@ export interface OrderValidityInfo {
  * - FRESH (Verde #22C55E): 0% - 33.3% del tiempo transcurrido (Vigente / En plazo).
  * - WARNING (Amarillo #F59E0B): 33.3% - 66.6% del tiempo transcurrido (Por vencer).
  * - CRITICAL (Rojo #EF4444): >66.6% del tiempo transcurrido (Crítico) o fecha ya vencida (Vencido).
+ * - DELIVERED (Verde #22C55E): Pedido entregado con éxito (Entregado).
  */
 export function getOrderValidity(
   createdAt: string | Date | null | undefined,
-  dueDate?: string | Date | null | undefined
+  dueDate?: string | Date | null | undefined,
+  orderStatus?: string | null
 ): OrderValidityInfo {
-  const nowMs = Date.now();
-
   const parsedStart = parseLocalDate(createdAt);
   const startDate = parsedStart || new Date();
-  const startMs = startDate.getTime();
-
-  // Fecha límite efectiva: se ancla a las 23:59:59.999 del día de entrega en hora local
   const endDate = getLocalEndOfDay(dueDate || startDate);
 
+  if (orderStatus === "DELIVERED") {
+    return {
+      status: "DELIVERED",
+      color: ORDER_VALIDITY_COLORS.DELIVERED,
+      label: "Entregado",
+      percentElapsed: 100,
+      isOverdue: false,
+      effectiveDueDate: endDate,
+    };
+  }
+
+  const nowMs = Date.now();
+  const startMs = startDate.getTime();
   const endMs = endDate.getTime();
   const totalMs = endMs - startMs;
 

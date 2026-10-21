@@ -530,7 +530,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
          * De esta forma, el operador identifica de inmediato qué zonas y pedidos deben incluirse primero en una ruta.
          * Una vez despachado y en seguimiento activo, el pedido pasa al ciclo de vida de ORDER_STATUS_COLORS (IN_TRANSIT, DELIVERED, etc.).
          */
-        const validity = getOrderValidity(order.createdAt, order.dueDate);
+        const validity = getOrderValidity(order.createdAt, order.dueDate, order.status);
         const markerColor = ORDER_VALIDITY_COLORS[validity.status];
         htmlContent = VALIDITY_ORDER_MARKER_HTML(markerColor, clientName, orderCode);
       }

@@ -445,8 +445,13 @@ export const OrderDetailDrawer = ({ isOpen, onClose, orderId }: OrderDetailDrawe
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Vencimiento</span>
               <div className="flex items-center gap-2">
                 {(() => {
-                  const val = getOrderValidity(order.createdAt, order.dueDate);
-                  const badgeVariant = val.status === "FRESH" ? "success" : val.status === "WARNING" ? "warning" : "danger";
+                  const val = getOrderValidity(order.createdAt, order.dueDate, order.status);
+                  const badgeVariant =
+                    val.status === "DELIVERED" || val.status === "FRESH"
+                      ? "success"
+                      : val.status === "WARNING"
+                      ? "warning"
+                      : "danger";
                   return (
                     <Badge variant={badgeVariant} withDot className="text-[10px] py-0.5 px-2">
                       {val.label}
