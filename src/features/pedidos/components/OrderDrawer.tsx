@@ -34,7 +34,8 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
   const queryClient = useQueryClient();
   const [addressMode, setAddressMode] = useState<"search" | "url">("search");
   const [predictions, setPredictions] = useState<any[]>([]);
-  const autocompleteServiceRef = useRef<any>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionTokenRef = useRef<any>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
   const { isLoaded } = useGoogleMapsLoader();
 
@@ -66,11 +67,28 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
     },
   });
 
-  // Google Autocomplete Service (V1) deprecation: Eliminado el ref y el useEffect de inicialización.
-  // Ahora usaremos AutocompleteSuggestion de la nueva API directamente en handleAddressChange.
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  const getOrCreateSessionToken = () => {
+    if (!sessionTokenRef.current && typeof window !== "undefined" && window.google?.maps?.places?.AutocompleteSessionToken) {
+      sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+    }
+    return sessionTokenRef.current;
+  };
 
   const handleAddressChange = (val: string) => {
     setValue("rawAddress", val, { shouldValidate: true });
+
+    // Cancelar temporizador previo si el usuario sigue tecleando
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
 
     // 1. Extraer coordenadas con prioridad estricta:
     // a. Coordenadas exactas del pin del lugar (!3d{lat}!4d{lng})
@@ -87,7 +105,7 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
       setPredictions([]);
 
       // Obtener dirección urbana legible por Geocodificación Inversa
-      if (window.google && window.google.maps && window.google.maps.Geocoder) {
+      if (typeof window !== "undefined" && window.google?.maps?.Geocoder) {
         const geocoder = new window.google.maps.Geocoder();
         const latNum = parseFloat(coordsMatch[1]);
         const lngNum = parseFloat(coordsMatch[2]);
@@ -103,28 +121,39 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
     // 2. Si es una URL (corta o de Google Maps sin coordenadas explícitas en texto):
     if (val.includes("http") || val.includes("goo.gl") || val.includes("maps")) {
       setPredictions([]);
-      // Limpiar coordenadas previas para evitar arrastrar datos obsoletos
       setValue("latitude", "");
       setValue("longitude", "");
       setValue("formattedAddress", "");
       return;
     }
 
-    // 3. Búsqueda de dirección estándar por autocompletado de Google Places
-    if (addressMode === "search" && val && val.length >= 3) {
-      if (typeof window !== "undefined" && window.google && window.google.maps && window.google.maps.places && window.google.maps.places.AutocompleteSuggestion) {
-        window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
-          input: val,
-          includedRegionCodes: ["pe"],
-        })
-          .then(({ suggestions }: any) => {
-            setPredictions(suggestions || []);
-          })
-          .catch((err: any) => {
-            console.error("Error fetching places:", err);
-            setPredictions([]);
-          });
-      }
+    // 3. Búsqueda de dirección estándar optimizada con DEBOUNCE (350ms) y Session Token
+    const cleanQuery = val.trim();
+    if (addressMode === "search" && cleanQuery.length >= 3) {
+      debounceTimerRef.current = setTimeout(() => {
+        if (
+          typeof window !== "undefined" &&
+          window.google?.maps?.places?.AutocompleteSuggestion
+        ) {
+          const sessionToken = getOrCreateSessionToken();
+          const request: any = {
+            input: cleanQuery,
+            includedRegionCodes: ["pe"],
+          };
+          if (sessionToken) {
+            request.sessionToken = sessionToken;
+          }
+
+          window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request)
+            .then(({ suggestions }: any) => {
+              setPredictions(suggestions || []);
+            })
+            .catch((err: any) => {
+              console.error("Error fetching places:", err);
+              setPredictions([]);
+            });
+        }
+      }, 350);
     } else {
       setPredictions([]);
     }
@@ -135,8 +164,10 @@ export const OrderDrawer = ({ isOpen, onClose, order }: OrderDrawerProps) => {
     setValue("rawAddress", selectedAddress, { shouldValidate: true });
     setValue("formattedAddress", selectedAddress);
     setPredictions([]);
+    // Reiniciar token de sesión tras seleccionar el lugar
+    sessionTokenRef.current = null;
 
-    if (window.google && window.google.maps && window.google.maps.Geocoder) {
+    if (typeof window !== "undefined" && window.google?.maps?.Geocoder) {
       const geocoder = new window.google.maps.Geocoder();
       geocoder.geocode({ address: selectedAddress }, (results, status) => {
         if (status === "OK" && results && results[0]) {

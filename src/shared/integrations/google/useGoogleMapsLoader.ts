@@ -16,7 +16,6 @@ export const useGoogleMapsLoader = (): UseGoogleMapsLoaderResult => {
     Promise.all([
       loadGoogleMapsLibrary("maps"),
       loadGoogleMapsLibrary("marker"),
-      loadGoogleMapsLibrary("routes"),
       loadGoogleMapsLibrary("places"),
     ])
       .then(() => {

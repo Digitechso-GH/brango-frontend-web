@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
-import { loadGoogleMapsLibrary } from "@/shared/integrations/google/google-maps.loader";
 import { VEHICLE_MARKER_COLOR } from "@/shared/constants/status-colors";
+import { computeStreetRoute } from "@/shared/integrations/google/routes.service";
 
 export const useMapRoute = (map: google.maps.Map | null) => {
   const activePolylinesRef = useRef<any[]>([]);
@@ -24,91 +24,47 @@ export const useMapRoute = (map: google.maps.Map | null) => {
     clearRoute();
     const currentReqId = requestIdRef.current;
 
-    const bounds = new google.maps.LatLngBounds();
-    points.forEach((pt) => bounds.extend(pt));
-
     try {
-      const directionsService = new google.maps.DirectionsService();
+      // Dividir en bloques si supera los 25 puntos intermedios que soporta la API
+      const CHUNK_SIZE = 25;
+      const allPathCoordinates: Array<{ lat: number; lng: number }> = [];
 
-      for (let i = 0; i < points.length - 1; i++) {
-        const origin = points[i];
-        const destination = points[i + 1];
+      for (let i = 0; i < points.length - 1; i += CHUNK_SIZE) {
+        const chunk = points.slice(i, i + CHUNK_SIZE + 1);
+        if (chunk.length < 2) break;
 
-        // Si el origen y destino son prácticamente idénticos (ej. pedidos en el mismo edificio), trazar conexión directa
-        if (Math.abs(origin.lat - destination.lat) < 0.00005 && Math.abs(origin.lng - destination.lng) < 0.00005) {
-          const polyline = new google.maps.Polyline({
-            path: [origin, destination],
-            geodesic: true,
-            strokeColor: VEHICLE_MARKER_COLOR,
-            strokeOpacity: 0.85,
-            strokeWeight: 4,
-            map: map,
-          });
-          activePolylinesRef.current.push(polyline);
-          continue;
-        }
+        const streetPath = await computeStreetRoute(chunk);
+        if (requestIdRef.current !== currentReqId) return;
 
-        try {
-          const result = await new Promise<google.maps.DirectionsResult | null>((resolve) => {
-            directionsService.route(
-              {
-                origin: new google.maps.LatLng(origin.lat, origin.lng),
-                destination: new google.maps.LatLng(destination.lat, destination.lng),
-                travelMode: google.maps.TravelMode.DRIVING,
-              },
-              (res, status) => {
-                if (status === google.maps.DirectionsStatus.OK && res) {
-                  resolve(res);
-                } else {
-                  resolve(null);
-                }
-              }
-            );
-          });
-
-          if (requestIdRef.current !== currentReqId) return;
-
-          if (result && result.routes && result.routes[0]) {
-            const path = result.routes[0].overview_path;
-            path.forEach((pt) => bounds.extend(pt));
-
-            const polyline = new google.maps.Polyline({
-              path,
-              geodesic: true,
-              strokeColor: VEHICLE_MARKER_COLOR,
-              strokeOpacity: 0.85,
-              strokeWeight: 5,
-              map: map,
-            });
-            activePolylinesRef.current.push(polyline);
-          } else {
-            // Línea directa en caso de fallback
-            const polyline = new google.maps.Polyline({
-              path: [origin, destination],
-              geodesic: true,
-              strokeColor: VEHICLE_MARKER_COLOR,
-              strokeOpacity: 0.85,
-              strokeWeight: 4,
-              map: map,
-            });
-            activePolylinesRef.current.push(polyline);
-          }
-        } catch (err) {
-          if (requestIdRef.current !== currentReqId) return;
-          console.error("Error al calcular tramo de ruta:", err);
-          const polyline = new google.maps.Polyline({
-            path: [origin, destination],
-            geodesic: true,
-            strokeColor: VEHICLE_MARKER_COLOR,
-            strokeOpacity: 0.85,
-            strokeWeight: 4,
-            map: map,
-          });
-          activePolylinesRef.current.push(polyline);
-        }
+        allPathCoordinates.push(...streetPath);
       }
+
+      if (requestIdRef.current !== currentReqId) return;
+
+      const polyline = new google.maps.Polyline({
+        path: allPathCoordinates,
+        geodesic: true,
+        strokeColor: VEHICLE_MARKER_COLOR,
+        strokeOpacity: 0.85,
+        strokeWeight: 5,
+        map: map,
+      });
+
+      activePolylinesRef.current.push(polyline);
     } catch (err) {
-      console.error("Error al trazar la ruta serpiente multiparada:", err);
+      if (requestIdRef.current !== currentReqId) return;
+      console.error("Error al trazar la ruta con Routes API:", err);
+
+      // Fallback a línea directa
+      const polyline = new google.maps.Polyline({
+        path: points,
+        geodesic: true,
+        strokeColor: VEHICLE_MARKER_COLOR,
+        strokeOpacity: 0.85,
+        strokeWeight: 4,
+        map: map,
+      });
+      activePolylinesRef.current.push(polyline);
     }
   };
 

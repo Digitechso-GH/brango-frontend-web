@@ -6,6 +6,7 @@ import { trackingApi, PublicTrackingData } from "@/features/tracking/api/trackin
 import { ORDER_STATUS_DETAILS } from "@/shared/constants/order-status";
 import { ORDER_STATUS_COLORS, VEHICLE_MARKER_COLOR } from "@/shared/constants/status-colors";
 import { loadGoogleMapsLibrary } from "@/shared/integrations/google/google-maps.loader";
+import { computeStreetRoute } from "@/shared/integrations/google/routes.service";
 import { io, Socket } from "socket.io-client";
 import { 
   IconMapPin, 
@@ -37,7 +38,7 @@ export default function PublicTrackingPage() {
   const googleMapInstance = useRef<google.maps.Map | null>(null);
   const driverMarkerRef = useRef<any>(null);
   const destMarkerRef = useRef<any>(null);
-  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+  const activePolylineRef = useRef<google.maps.Polyline | null>(null);
 
   // 1. Cargar datos del pedido público
   const fetchTracking = async () => {
@@ -116,7 +117,6 @@ export default function PublicTrackingPage() {
       try {
         const { Map } = await loadGoogleMapsLibrary<typeof google.maps>("maps");
         const { AdvancedMarkerElement } = await loadGoogleMapsLibrary<any>("marker");
-        const { DirectionsService, DirectionsRenderer } = await loadGoogleMapsLibrary<any>("routes");
 
         if (isCancelled || !mapRef.current) return;
 
@@ -172,32 +172,28 @@ export default function PublicTrackingPage() {
           });
           driverMarkerRef.current = driverMarker;
 
-          // Dibujar ruta entre chofer y destino
+          // Dibujar ruta entre chofer y destino con Routes API
           if (order.destinationLatitude && order.destinationLongitude) {
-            const directionsService = new DirectionsService();
-            const directionsRenderer = new DirectionsRenderer({
-              map,
-              suppressMarkers: true,
-              polylineOptions: {
-                strokeColor: VEHICLE_MARKER_COLOR,
-                strokeWeight: 5,
-                strokeOpacity: 0.8,
-              },
-            });
-            directionsRendererRef.current = directionsRenderer;
+            const streetPath = await computeStreetRoute([
+              driverPos,
+              { lat: order.destinationLatitude, lng: order.destinationLongitude },
+            ]);
 
-            directionsService.route(
-              {
-                origin: driverPos,
-                destination: { lat: order.destinationLatitude, lng: order.destinationLongitude },
-                travelMode: google.maps.TravelMode.DRIVING,
-              },
-              (result: any, status: any) => {
-                if (status === google.maps.DirectionsStatus.OK && result) {
-                  directionsRenderer.setDirections(result);
-                }
+            if (!isCancelled && googleMapInstance.current) {
+              if (activePolylineRef.current) {
+                activePolylineRef.current.setMap(null);
               }
-            );
+
+              const polyline = new google.maps.Polyline({
+                path: streetPath,
+                geodesic: true,
+                strokeColor: VEHICLE_MARKER_COLOR,
+                strokeOpacity: 0.85,
+                strokeWeight: 5,
+                map: googleMapInstance.current,
+              });
+              activePolylineRef.current = polyline;
+            }
           }
         }
       } catch (err) {
