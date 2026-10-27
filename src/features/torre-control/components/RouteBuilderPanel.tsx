@@ -160,9 +160,9 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
 
       if (detail.driver) {
         setCurrentRouteDriver({
-          id: detail.driverId || detail.driver.id,
-          name: detail.driver.user?.name || "Chofer Asignado",
-          unit: detail.driver.unit || null,
+          id: detail.driverId,
+          name: detail.driver.user.name,
+          unit: detail.driver.unit,
         });
       } else {
         setCurrentRouteDriver(null);
