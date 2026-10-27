@@ -18,6 +18,7 @@ function TorreControlContent() {
 
   // Route Builder State
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [extraRouteOrders, setExtraRouteOrders] = useState<any[]>([]);
 
   const handleSelectOrder = (orderId: string) => {
     setActiveOrderId(orderId);
@@ -44,6 +45,7 @@ function TorreControlContent() {
 
   const handleRouteSaved = () => {
     setSelectedOrderIds([]);
+    setExtraRouteOrders([]);
   };
 
   return (
@@ -55,6 +57,7 @@ function TorreControlContent() {
           <MapView
             focusedOrder={focusedOrder}
             selectedOrderIds={selectedOrderIds}
+            extraOrders={extraRouteOrders}
             onSelectOrderForRoute={handleSelectOrderForRoute}
             onClearFocus={() => setFocusedOrder(null)}
           />
@@ -69,6 +72,7 @@ function TorreControlContent() {
                 onReorder={handleReorder}
                 onRouteSaved={handleRouteSaved}
                 onSetSelectedOrders={setSelectedOrderIds}
+                onSetExtraOrders={setExtraRouteOrders}
                 initialRouteId={editRouteId}
               />
             </div>

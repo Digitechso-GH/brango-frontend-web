@@ -24,11 +24,18 @@ import {
 interface MapViewProps {
   focusedOrder?: any | null;
   selectedOrderIds?: string[];
+  extraOrders?: any[];
   onSelectOrderForRoute?: (id: string) => void;
   onClearFocus?: () => void;
 }
 
-export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds = [], onSelectOrderForRoute, onClearFocus }) => {
+export const MapView: React.FC<MapViewProps> = ({
+  focusedOrder,
+  selectedOrderIds = [],
+  extraOrders = [],
+  onSelectOrderForRoute,
+  onClearFocus,
+}) => {
   const [googleMap, setGoogleMap] = useState<google.maps.Map | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [timeTick, setTimeTick] = useState(0); 
@@ -446,8 +453,13 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
     const currentIds = new Set<string>();
 
     // 1. Obtener órdenes del Route Builder y Pedidos Disponibles
+    const allKnownOrders = [
+      ...allTodayOrders,
+      ...extraOrders.filter((eo: any) => !allTodayOrders.some((ao: any) => ao.id === eo.id)),
+    ];
+
     const selectedOrdersFull = selectedOrderIds
-      .map((id) => allTodayOrders.find((o: any) => o.id === id))
+      .map((id) => allKnownOrders.find((o: any) => o.id === id))
       .filter(Boolean);
 
     const availableForDispatch = selectedOrder
@@ -639,7 +651,7 @@ export const MapView: React.FC<MapViewProps> = ({ focusedOrder, selectedOrderIds
       });
       routeMarkersDict.current = {};
     };
-  }, [googleMap, selectedOrderIds, allTodayOrders, onSelectOrderForRoute, selectedOrder, mapZoom, drawMultiStopRoute, clearRoute]);
+  }, [googleMap, selectedOrderIds, allTodayOrders, extraOrders, onSelectOrderForRoute, selectedOrder, mapZoom, drawMultiStopRoute, clearRoute]);
 
   const activeMapId = "DEMO_MAP_ID";
 

@@ -28,9 +28,12 @@ export interface RouteStopDetail {
   order: {
     id: string;
     code: string;
+    status?: string;
     waybill?: string | null;
     rawAddress: string;
     formattedAddress?: string | null;
+    latitude?: number | string | null;
+    longitude?: number | string | null;
     recipientName?: string | null;
     recipientPhone?: string | null;
     customer?: {

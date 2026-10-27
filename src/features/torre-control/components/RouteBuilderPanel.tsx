@@ -36,6 +36,7 @@ interface RouteBuilderPanelProps {
   onRemoveOrder: (id: string) => void;
   onReorder: (newOrder: string[]) => void;
   onSetSelectedOrders: (orderIds: string[]) => void;
+  onSetExtraOrders?: (orders: any[]) => void;
   initialRouteId?: string | null;
 }
 
@@ -46,6 +47,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   onRemoveOrder,
   onReorder,
   onSetSelectedOrders,
+  onSetExtraOrders,
   initialRouteId,
 }) => {
   const queryClient = useQueryClient();
@@ -56,6 +58,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   const [editingRouteId, setEditingRouteId] = useState<string | null>(initialRouteId || null);
   const [editingRouteSequence, setEditingRouteSequence] = useState<number | null>(null);
   const [loadedOrders, setLoadedOrders] = useState<any[]>([]);
+  const [currentRouteDriver, setCurrentRouteDriver] = useState<{ id: string; name: string; unit?: string | null } | null>(null);
 
   const [routeName, setRouteName] = useState("");
   const [driverId, setDriverId] = useState("");
@@ -76,7 +79,15 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   const { data: driversResponse } = useAvailableDriversQuery(date);
   const availableDrivers = Array.isArray(driversResponse) ? driversResponse : [];
 
-  const driverOptions = availableDrivers.map((d: any) => ({
+  // Al editar una ruta, si el chofer ya asignado fue excluido por el backend por tener ruta en esa fecha, lo agregamos como opción disponible
+  const effectiveDrivers: Array<{ id: string; name: string; unit?: string | null }> = [
+    ...availableDrivers.filter((d): d is NonNullable<typeof d> => Boolean(d)),
+  ];
+  if (currentRouteDriver && !effectiveDrivers.some((d) => d.id === currentRouteDriver.id)) {
+    effectiveDrivers.unshift(currentRouteDriver);
+  }
+
+  const driverOptions = effectiveDrivers.map((d: any) => ({
     label: `${d.name}${d.unit ? ` (${d.unit})` : ""}`,
     value: d.id,
   }));
@@ -147,11 +158,22 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
       setDriverId(detail.driverId || "");
       setDate(detail.date ? detail.date.slice(0, 10) : todayStr);
 
+      if (detail.driver) {
+        setCurrentRouteDriver({
+          id: detail.driverId || detail.driver.id,
+          name: detail.driver.user?.name || "Chofer Asignado",
+          unit: detail.driver.unit || null,
+        });
+      } else {
+        setCurrentRouteDriver(null);
+      }
+
       const assignments = detail.assignments || [];
       const orderIds = assignments.map((a: any) => a.orderId);
       const ordersInRoute = assignments.map((a: any) => a.order).filter(Boolean);
 
       setLoadedOrders(ordersInRoute);
+      onSetExtraOrders?.(ordersInRoute);
       onSetSelectedOrders(orderIds);
       setViewMode("FORM");
     } catch (error: any) {
@@ -171,10 +193,12 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   const handleStartNewRoute = () => {
     setEditingRouteId(null);
     setEditingRouteSequence(null);
+    setCurrentRouteDriver(null);
     setRouteName("");
     setDriverId("");
     setDate(todayStr);
     setLoadedOrders([]);
+    onSetExtraOrders?.([]);
     onSetSelectedOrders([]);
     setViewMode("FORM");
   };
@@ -183,9 +207,11 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
     setViewMode("LIST");
     setEditingRouteId(null);
     setEditingRouteSequence(null);
+    setCurrentRouteDriver(null);
     setRouteName("");
     setDriverId("");
     setLoadedOrders([]);
+    onSetExtraOrders?.([]);
     onSetSelectedOrders([]);
   };
 
