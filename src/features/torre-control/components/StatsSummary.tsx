@@ -9,7 +9,7 @@ import {
   IconChecklist, 
   IconMapPin 
 } from "@tabler/icons-react";
-import { ORDER_STATUS } from "@/shared/constants/order-status";
+import { ORDER_STATUS, isOrderUnassignedForToday } from "@/shared/constants/order-status";
 import { ROUTE_STATUS } from "@/shared/constants/route-status";
 import { getLocalTodayString } from "@/shared/utils/date";
 
@@ -27,8 +27,8 @@ export const StatsSummary = () => {
   const allTodayOrders = ordersResponse?.data || [];
   const totalOrders = allTodayOrders.length;
   const deliveredOrders = allTodayOrders.filter((o: any) => o.status === ORDER_STATUS.DELIVERED).length;
-  const unassignedOrders = allTodayOrders.filter(
-    (o: any) => o.status === ORDER_STATUS.PENDING && !o.routeAssignmentId && !o.driverId
+  const unassignedOrders = allTodayOrders.filter((o: any) =>
+    isOrderUnassignedForToday(o, todayStr),
   ).length;
 
   const progressPct = totalOrders > 0 ? Math.round((deliveredOrders / totalOrders) * 100) : 0;

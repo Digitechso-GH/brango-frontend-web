@@ -8,6 +8,7 @@ import {
   ORDER_STATUS_FILTER_OPTIONS,
   FRONTEND_TO_BACKEND_STATUS_MAP,
   ORDER_STATUS_DETAILS,
+  isOrderUnassignedForToday,
 } from "@/shared/constants/order-status";
 import { getLocalTodayString, formatLocalTime } from "@/shared/utils/date";
 import {
@@ -97,7 +98,7 @@ export const OrderSideList = ({
       const rId = order.routeId;
       if (rId && routeOrdersMap[rId]) {
         routeOrdersMap[rId].push(order);
-      } else {
+      } else if (isOrderUnassignedForToday(order, todayStr)) {
         unassigned.push(order);
       }
     });

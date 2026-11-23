@@ -5,7 +5,7 @@ import { GoogleMapView } from "@/shared/integrations/google/components/GoogleMap
 import { useDriverTrackingSocket } from "../hooks/useDriverTrackingSocket";
 import { useMapRoute } from "../hooks/useMapRoute";
 import { useDriversQuery, usePedidosTodayQuery, useSedesQuery } from "@/features/pedidos/hooks/usePedidosQueries";
-import { ORDER_STATUS_DETAILS, ORDER_STATUS, FRONTEND_TO_BACKEND_STATUS_MAP } from "@/shared/constants/order-status";
+import { ORDER_STATUS_DETAILS, ORDER_STATUS, FRONTEND_TO_BACKEND_STATUS_MAP, isOrderUnassignedForToday } from "@/shared/constants/order-status";
 import { ORDER_STATUS_COLORS, VEHICLE_MARKER_COLOR, ORDER_VALIDITY_COLORS } from "@/shared/constants/status-colors";
 import { getOrderValidity } from "@/shared/utils/orderValidity.utils";
 import { getLocalTodayString } from "@/shared/utils/date";
@@ -30,6 +30,7 @@ interface MapViewProps {
   selectedRouteId?: string;
   selectedStatus?: string;
   onSelectOrder?: (id: string) => void;
+  isBuildingRoute?: boolean;
 }
 
 export const MapView: React.FC<MapViewProps> = ({
@@ -41,6 +42,7 @@ export const MapView: React.FC<MapViewProps> = ({
   selectedRouteId = "all",
   selectedStatus = "all",
   onSelectOrder,
+  isBuildingRoute = false,
 }) => {
   const [googleMap, setGoogleMap] = useState<google.maps.Map | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -468,9 +470,10 @@ export const MapView: React.FC<MapViewProps> = ({
       .map((id) => allKnownOrders.find((o: any) => o.id === id))
       .filter(Boolean);
 
+    const isRouteBuilderActive = isBuildingRoute || selectedOrderIds.length > 0;
     let visibleItems: Array<{ order: any; isRoute: boolean; routeIdx: number }> = [];
 
-    if (selectedOrderIds.length > 0) {
+    if (isRouteBuilderActive) {
       // Modo Route Builder: respeta las órdenes seleccionadas para armar ruta y las pendientes disponibles
       const availableForDispatch = selectedOrder
         ? []
@@ -502,7 +505,7 @@ export const MapView: React.FC<MapViewProps> = ({
         // Filtro de ruta
         if (selectedRouteId !== "all") {
           if (selectedRouteId === "unassigned") {
-            if (o.routeId) return false;
+            if (!isOrderUnassignedForToday(o)) return false;
           } else {
             if (o.routeId !== selectedRouteId) return false;
           }
@@ -567,7 +570,7 @@ export const MapView: React.FC<MapViewProps> = ({
       let htmlContent: string;
       const statusDetail = ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;
 
-      if (selectedOrderIds.length > 0) {
+      if (isRouteBuilderActive) {
         if (isRoute) {
           // Pedido asignado a la ruta en construcción
           htmlContent = DESTINATION_MARKER_HTML(VEHICLE_MARKER_COLOR, `${routeIdx + 1}`, clientName, orderCode);
@@ -592,7 +595,7 @@ export const MapView: React.FC<MapViewProps> = ({
       }
 
       const handleMarkerAction = () => {
-        if (selectedOrderIds.length > 0) {
+        if (isRouteBuilderActive) {
           if (!isRoute && onSelectOrderForRoute) {
             onSelectOrderForRoute(order.id);
           } else if (isRoute) {
@@ -706,7 +709,7 @@ export const MapView: React.FC<MapViewProps> = ({
             clearRoute();
           }
         }
-      } else if (selectedOrderIds.length === 0 && selectedRouteId !== "all" && selectedRouteId !== "unassigned") {
+      } else if (!isRouteBuilderActive && selectedRouteId !== "all" && selectedRouteId !== "unassigned") {
         // Visualización de una ruta específica seleccionada en Torre de Control
         const routeStops = validVisibleItems
           .filter((item) => item.isRoute)
@@ -742,6 +745,7 @@ export const MapView: React.FC<MapViewProps> = ({
   }, [
     googleMap,
     selectedOrderIds,
+    isBuildingRoute,
     allTodayOrders,
     extraOrders,
     onSelectOrderForRoute,

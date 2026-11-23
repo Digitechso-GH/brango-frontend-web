@@ -44,6 +44,7 @@ interface RouteBuilderPanelProps {
   onSetSelectedOrders: (orderIds: string[]) => void;
   onSetExtraOrders?: (orders: any[]) => void;
   initialRouteId?: string | null;
+  onBuildingStateChange?: (isBuilding: boolean) => void;
 }
 
 export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
@@ -55,12 +56,17 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   onSetSelectedOrders,
   onSetExtraOrders,
   initialRouteId,
+  onBuildingStateChange,
 }) => {
   const queryClient = useQueryClient();
   const todayStr = getLocalTodayString();
 
   // Mode: 'LIST' (Master - browse routes of the day) | 'FORM' (Detail - create or edit route)
   const [viewMode, setViewMode] = useState<"LIST" | "FORM">(initialRouteId ? "FORM" : "LIST");
+
+  useEffect(() => {
+    onBuildingStateChange?.(viewMode === "FORM");
+  }, [viewMode, onBuildingStateChange]);
   const [editingRouteId, setEditingRouteId] = useState<string | null>(initialRouteId || null);
   const [editingRouteSequence, setEditingRouteSequence] = useState<number | null>(null);
   const [loadedOrders, setLoadedOrders] = useState<any[]>([]);
@@ -657,17 +663,29 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
               .map((order: any) => (
                 <div
                   key={order.id}
-                  className="flex items-center justify-between p-2 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-slate-800/80 rounded-lg hover:border-slate-200 dark:hover:border-slate-700 transition-colors"
+                  onClick={() => onSelectOrder(order.id)}
+                  className="flex items-center justify-between p-2 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-slate-800/80 rounded-lg hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/30 dark:hover:bg-blue-950/20 transition-all cursor-pointer group"
                 >
                   <div className="flex-1 min-w-0 pr-2">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">#{order.code}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">#{order.code}</p>
+                      {order.dueDate && (
+                        <span className="text-[9.5px] px-1.5 py-0.2 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-semibold shrink-0">
+                          Despacho: {formatLocalDate(order.dueDate)}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                       {order.formattedAddress || order.rawAddress || "Dirección no disponible"}
                     </p>
                   </div>
                   <button
-                    onClick={() => onSelectOrder(order.id)}
-                    className="p-1 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectOrder(order.id);
+                    }}
+                    className="p-1 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 transition-colors cursor-pointer"
                     title="Agregar a la ruta"
                   >
                     <IconPlus size={14} />

@@ -19,6 +19,7 @@ function TorreControlContent() {
   // Route Builder State
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [extraRouteOrders, setExtraRouteOrders] = useState<any[]>([]);
+  const [isBuildingRoute, setIsBuildingRoute] = useState(false);
 
   // Filtros sincronizados entre Lista Lateral y Mapa
   const [selectedRouteId, setSelectedRouteId] = useState<string>("all");
@@ -67,6 +68,7 @@ function TorreControlContent() {
             selectedRouteId={selectedRouteId}
             selectedStatus={selectedStatus}
             onSelectOrder={handleSelectOrder}
+            isBuildingRoute={isBuildingRoute}
           />
 
           {/* Panel Flotante del Route Builder */}
@@ -81,6 +83,7 @@ function TorreControlContent() {
                 onSetSelectedOrders={setSelectedOrderIds}
                 onSetExtraOrders={setExtraRouteOrders}
                 initialRouteId={editRouteId}
+                onBuildingStateChange={setIsBuildingRoute}
               />
             </div>
           </div>

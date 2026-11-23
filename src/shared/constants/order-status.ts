@@ -1,4 +1,5 @@
 import { ORDER_STATUS_COLORS } from "./status-colors";
+import { getLocalTodayString } from "../utils/date";
 
 export const ORDER_STATUS = {
   PENDING: "PENDING",
@@ -59,4 +60,34 @@ export const FRONTEND_TO_BACKEND_STATUS_MAP: Record<string, string> = {
   en_camino: ORDER_STATUS.IN_TRANSIT,
   entregado: ORDER_STATUS.DELIVERED,
   observado: ORDER_STATUS.OBSERVED,
+};
+
+/**
+ * Determina si un pedido está pendiente de asignación a ruta para hoy.
+ * - PENDING sin ruta, chofer ni asignación activa -> true
+ * - OBSERVED de un día anterior (reintento por reasignar) -> true
+ * - DELIVERED, IN_TRANSIT, FAILED o ya asignados hoy -> false
+ */
+export const isOrderUnassignedForToday = (
+  order: any,
+  todayStr: string = getLocalTodayString(),
+): boolean => {
+  if (!order) return false;
+
+  if (order.status === ORDER_STATUS.OBSERVED) {
+    const latestAssignment = order.assignments?.[0];
+    if (latestAssignment?.date) {
+      const assignmentDateStr = getLocalTodayString(latestAssignment.date);
+      if (assignmentDateStr === todayStr) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  if (order.status === ORDER_STATUS.PENDING) {
+    return !order.routeId && !order.driverId && !order.routeAssignmentId;
+  }
+
+  return false;
 };
