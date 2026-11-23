@@ -19,11 +19,6 @@ function TorreControlContent() {
   // Route Builder State
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [extraRouteOrders, setExtraRouteOrders] = useState<any[]>([]);
-  const [isBuildingRoute, setIsBuildingRoute] = useState(false);
-
-  // Filtros sincronizados entre Lista Lateral y Mapa
-  const [selectedRouteId, setSelectedRouteId] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   const handleSelectOrder = (orderId: string) => {
     setActiveOrderId(orderId);
@@ -31,17 +26,17 @@ function TorreControlContent() {
   };
 
   const handleFocusOrder = (order: any) => {
-    setFocusedOrder((prev: any) => (prev?.id === order?.id ? null : order));
+    setFocusedOrder((prev: any) => prev?.id === order?.id ? null : order);
   };
 
   const handleSelectOrderForRoute = (orderId: string) => {
     if (!selectedOrderIds.includes(orderId)) {
-      setSelectedOrderIds((prev) => [...prev, orderId]);
+      setSelectedOrderIds(prev => [...prev, orderId]);
     }
   };
 
   const handleRemoveOrderFromRoute = (orderId: string) => {
-    setSelectedOrderIds((prev) => prev.filter((id) => id !== orderId));
+    setSelectedOrderIds(prev => prev.filter(id => id !== orderId));
   };
 
   const handleReorder = (newOrder: string[]) => {
@@ -65,10 +60,6 @@ function TorreControlContent() {
             extraOrders={extraRouteOrders}
             onSelectOrderForRoute={handleSelectOrderForRoute}
             onClearFocus={() => setFocusedOrder(null)}
-            selectedRouteId={selectedRouteId}
-            selectedStatus={selectedStatus}
-            onSelectOrder={handleSelectOrder}
-            isBuildingRoute={isBuildingRoute}
           />
 
           {/* Panel Flotante del Route Builder */}
@@ -83,21 +74,13 @@ function TorreControlContent() {
                 onSetSelectedOrders={setSelectedOrderIds}
                 onSetExtraOrders={setExtraRouteOrders}
                 initialRouteId={editRouteId}
-                onBuildingStateChange={setIsBuildingRoute}
               />
             </div>
           </div>
         </div>
 
         <div className="lg:col-span-1 h-full overflow-hidden min-h-0">
-          <OrderSideList
-            onSelectOrder={handleSelectOrder}
-            onFocusOrder={handleFocusOrder}
-            selectedRouteId={selectedRouteId}
-            onSelectRoute={setSelectedRouteId}
-            selectedStatus={selectedStatus}
-            onSelectStatus={setSelectedStatus}
-          />
+          <OrderSideList onSelectOrder={handleSelectOrder} onFocusOrder={handleFocusOrder} />
         </div>
       </div>
 
@@ -112,13 +95,7 @@ function TorreControlContent() {
 
 export default function TorreControlPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex-1 flex items-center justify-center p-12 text-xs text-slate-400">
-          Cargando Torre de Control...
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center p-12 text-xs text-slate-400">Cargando Torre de Control...</div>}>
       <TorreControlContent />
     </Suspense>
   );

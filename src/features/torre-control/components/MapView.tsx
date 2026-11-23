@@ -5,7 +5,7 @@ import { GoogleMapView } from "@/shared/integrations/google/components/GoogleMap
 import { useDriverTrackingSocket } from "../hooks/useDriverTrackingSocket";
 import { useMapRoute } from "../hooks/useMapRoute";
 import { useDriversQuery, usePedidosTodayQuery, useSedesQuery } from "@/features/pedidos/hooks/usePedidosQueries";
-import { ORDER_STATUS_DETAILS, ORDER_STATUS, FRONTEND_TO_BACKEND_STATUS_MAP, isOrderUnassignedForToday } from "@/shared/constants/order-status";
+import { ORDER_STATUS_DETAILS, ORDER_STATUS } from "@/shared/constants/order-status";
 import { ORDER_STATUS_COLORS, VEHICLE_MARKER_COLOR, ORDER_VALIDITY_COLORS } from "@/shared/constants/status-colors";
 import { getOrderValidity } from "@/shared/utils/orderValidity.utils";
 import { getLocalTodayString } from "@/shared/utils/date";
@@ -27,10 +27,6 @@ interface MapViewProps {
   extraOrders?: any[];
   onSelectOrderForRoute?: (id: string) => void;
   onClearFocus?: () => void;
-  selectedRouteId?: string;
-  selectedStatus?: string;
-  onSelectOrder?: (id: string) => void;
-  isBuildingRoute?: boolean;
 }
 
 export const MapView: React.FC<MapViewProps> = ({
@@ -39,10 +35,6 @@ export const MapView: React.FC<MapViewProps> = ({
   extraOrders = [],
   onSelectOrderForRoute,
   onClearFocus,
-  selectedRouteId = "all",
-  selectedStatus = "all",
-  onSelectOrder,
-  isBuildingRoute = false,
 }) => {
   const [googleMap, setGoogleMap] = useState<google.maps.Map | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -460,7 +452,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
     const currentIds = new Set<string>();
 
-    // 1. Obtener órdenes del Route Builder o de Torre de Control según filtros
+    // 1. Obtener órdenes del Route Builder y Pedidos Disponibles
     const allKnownOrders = [
       ...allTodayOrders,
       ...extraOrders.filter((eo: any) => !allTodayOrders.some((ao: any) => ao.id === eo.id)),
@@ -470,74 +462,39 @@ export const MapView: React.FC<MapViewProps> = ({
       .map((id) => allKnownOrders.find((o: any) => o.id === id))
       .filter(Boolean);
 
-    const isRouteBuilderActive = isBuildingRoute || selectedOrderIds.length > 0;
-    let visibleItems: Array<{ order: any; isRoute: boolean; routeIdx: number }> = [];
-
-    if (isRouteBuilderActive) {
-      // Modo Route Builder: respeta las órdenes seleccionadas para armar ruta y las pendientes disponibles
-      const availableForDispatch = selectedOrder
-        ? []
-        : allTodayOrders.filter((o: any) => {
-            if (selectedOrderIds.includes(o.id)) return false;
-            if (o.status === ORDER_STATUS.OBSERVED) {
-              const latestAssignment = o.assignments?.[0];
-              if (latestAssignment && latestAssignment.date) {
-                const assignmentDateStr = getLocalTodayString(latestAssignment.date);
-                if (assignmentDateStr === getLocalTodayString()) {
-                  return false; // No mostrar observados del mismo día
-                }
+    const availableForDispatch = selectedOrder
+      ? []
+      : allTodayOrders.filter((o: any) => {
+          if (selectedOrderIds.includes(o.id)) return false;
+          if (o.status === ORDER_STATUS.OBSERVED) {
+            const latestAssignment = o.assignments?.[0];
+            if (latestAssignment && latestAssignment.date) {
+              const assignmentDateStr = getLocalTodayString(latestAssignment.date);
+              if (assignmentDateStr === getLocalTodayString()) {
+                return false; // No mostrar observados del mismo día
               }
-              return true;
             }
-            if (o.status === ORDER_STATUS.PENDING && !o.driverId) return true;
-            return false;
-          });
-
-      visibleItems = [
-        ...selectedOrdersFull.map((o: any, idx: number) => ({ order: o, isRoute: true, routeIdx: idx })),
-        ...availableForDispatch.map((o: any) => ({ order: o, isRoute: false, routeIdx: -1 })),
-      ];
-    } else {
-      // Modo Monitoreo / Torre de Control con Filtros de Rutas y Estado
-      const targetStatus = selectedStatus !== "all" ? FRONTEND_TO_BACKEND_STATUS_MAP[selectedStatus] : null;
-
-      const filteredOrders = allTodayOrders.filter((o: any) => {
-        // Filtro de ruta
-        if (selectedRouteId !== "all") {
-          if (selectedRouteId === "unassigned") {
-            if (!isOrderUnassignedForToday(o)) return false;
-          } else {
-            if (o.routeId !== selectedRouteId) return false;
+            return true;
           }
-        }
-
-        // Filtro de estado
-        if (targetStatus && o.status !== targetStatus) return false;
-
-        return true;
-      });
-
-      visibleItems = filteredOrders.map((o: any) => ({
-        order: o,
-        isRoute: !!o.routeId,
-        routeIdx: (o.sequenceIndex ?? 1) - 1,
-      }));
-    }
-
-    const validVisibleItems = visibleItems.filter(
-      (item) => item.order.latitude !== null && item.order.latitude !== undefined &&
-                item.order.longitude !== null && item.order.longitude !== undefined
-    );
+          if (o.status === ORDER_STATUS.PENDING && !o.driverId) return true;
+          return false;
+        });
 
     // 2. Agrupar órdenes visibles para evitar que marcadores en coordenadas idénticas se solapen
+    const visibleItems = [
+      ...selectedOrdersFull.map((o: any, idx: number) => ({ order: o, isRoute: true, routeIdx: idx })),
+      ...availableForDispatch.map((o: any) => ({ order: o, isRoute: false, routeIdx: -1 })),
+    ].filter((item) => item.order.latitude !== null && item.order.longitude !== null);
+
     const coordGroups = new Map<string, Array<{ order: any; isRoute: boolean; routeIdx: number }>>();
-    validVisibleItems.forEach((item) => {
+    visibleItems.forEach((item) => {
       const key = `${Number(item.order.latitude).toFixed(4)},${Number(item.order.longitude).toFixed(4)}`;
       if (!coordGroups.has(key)) coordGroups.set(key, []);
       coordGroups.get(key)!.push(item);
     });
 
     // Ordenamiento canónico e inmutable por código e ID de pedido
+    // Evita que los marcadores en la misma coordenada intercambien posiciones al cambiar entre pendiente y ruta
     coordGroups.forEach((group) => {
       group.sort((a, b) => {
         const codeA = Number(a.order.code) || 0;
@@ -559,7 +516,7 @@ export const MapView: React.FC<MapViewProps> = ({
     };
 
     // 3. Renderizar cada marcador visible
-    validVisibleItems.forEach((item) => {
+    visibleItems.forEach((item) => {
       const { order, isRoute, routeIdx } = item;
       const pt = getPos(item);
       const clientName = getClientName(order) || "Cliente";
@@ -568,70 +525,40 @@ export const MapView: React.FC<MapViewProps> = ({
       currentIds.add(markerId);
 
       let htmlContent: string;
-      const statusDetail = ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;
-
-      if (isRouteBuilderActive) {
-        if (isRoute) {
-          // Pedido asignado a la ruta en construcción
-          htmlContent = DESTINATION_MARKER_HTML(VEHICLE_MARKER_COLOR, `${routeIdx + 1}`, clientName, orderCode);
-        } else {
-          // Pedidos disponibles para despacho (SLA / Vigencia)
-          const validity = getOrderValidity(order.createdAt, order.dueDate, order.status);
-          const markerColor = ORDER_VALIDITY_COLORS[validity.status];
-          htmlContent = VALIDITY_ORDER_MARKER_HTML(markerColor, clientName, orderCode);
-        }
+      if (isRoute) {
+        // Pedido asignado a la ruta en construcción: se numera secuencialmente con el color oficial de la flota
+        htmlContent = DESTINATION_MARKER_HTML(VEHICLE_MARKER_COLOR, `${routeIdx + 1}`, clientName, orderCode);
       } else {
-        // Modo Torre de Control
-        if (order.status === "DELIVERED") {
-          htmlContent = DESTINATION_MARKER_HTML(ORDER_STATUS_COLORS.DELIVERED, "✓", clientName, orderCode);
-        } else if (order.routeId) {
-          const badgeText = order.sequenceIndex ? `${order.sequenceIndex}` : `${routeIdx + 1}`;
-          htmlContent = DESTINATION_MARKER_HTML(statusDetail.color, badgeText, clientName, orderCode);
-        } else {
-          const validity = getOrderValidity(order.createdAt, order.dueDate, order.status);
-          const markerColor = ORDER_VALIDITY_COLORS[validity.status];
-          htmlContent = VALIDITY_ORDER_MARKER_HTML(markerColor, clientName, orderCode);
-        }
+        /**
+         * [DECISIÓN DE DISEÑO INTENCIONAL - NO MODIFICAR COMO ERROR/BUG]
+         * Criterio de color en Route Builder (Pedidos Disponibles para Despacho):
+         * - Los pedidos disponibles para armar rutas siempre están en estado PENDING (sin chofer) u OBSERVED.
+         * - Si usáramos ORDER_STATUS_COLORS aquí, el mapa mostraría todos los pines en gris monótono (#9CA3AF),
+         *   perdiendo todo valor operativo para el operador logístico.
+         * - Por ello, esta vista usa INTENCIONALMENTE ORDER_VALIDITY_COLORS (SLA / Vigencia con icono de reloj):
+         *   * VERDE (#22C55E): Pedido fresco (0-33.3% tiempo transcurrido).
+         *   * AMARILLO (#F59E0B): Pedido preventivo (33.3-66.6% tiempo transcurrido).
+         *   * ROJO (#EF4444): Pedido crítico próximo a vencer o vencido (>66.6% tiempo transcurrido).
+         * De esta forma, el operador identifica de inmediato qué zonas y pedidos deben incluirse primero en una ruta.
+         * Una vez despachado y en seguimiento activo, el pedido pasa al ciclo de vida de ORDER_STATUS_COLORS (IN_TRANSIT, DELIVERED, etc.).
+         */
+        const validity = getOrderValidity(order.createdAt, order.dueDate, order.status);
+        const markerColor = ORDER_VALIDITY_COLORS[validity.status];
+        htmlContent = VALIDITY_ORDER_MARKER_HTML(markerColor, clientName, orderCode);
       }
 
       const handleMarkerAction = () => {
-        if (isRouteBuilderActive) {
-          if (!isRoute && onSelectOrderForRoute) {
-            onSelectOrderForRoute(order.id);
-          } else if (isRoute) {
-            infoWindow.setContent(`
-              <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
-                <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
-                  Parada ${routeIdx + 1}: ${clientName}
-                </div>
-                <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
-                  Pedido: <span style="font-weight: 600; color: #1a73e8;">#${orderCode}</span>
-                </div>
-              </div>
-            `);
-            const targetMarker = routeMarkersDict.current[markerId];
-            if (targetMarker) {
-              infoWindow.open(googleMap, targetMarker);
-            }
-          }
-        } else {
-          // Modo Torre de Control: ventana informativa limpia
+        if (!isRoute && onSelectOrderForRoute) {
+          onSelectOrderForRoute(order.id);
+        } else if (isRoute) {
           infoWindow.setContent(`
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 6px 8px; text-align: left; min-width: 150px;">
-              <div style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 2px;">
-                ${clientName}
+            <div style="font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 4px 6px; text-align: left; min-width: 120px;">
+              <div style="font-size: 13px; font-weight: 700; color: #202124; line-height: 1.3; margin-bottom: 2px;">
+                Parada ${routeIdx + 1}: ${clientName}
               </div>
-              <div style="font-size: 11px; font-weight: 500; color: #64748b; margin-bottom: 3px;">
-                Pedido: <strong style="color: #2563eb;">#${orderCode}</strong>
+              <div style="font-size: 11px; font-weight: 500; color: #5f6368; line-height: 1.2;">
+                Pedido: <span style="font-weight: 600; color: #1a73e8;">#${orderCode}</span>
               </div>
-              <div style="font-size: 11px; font-weight: 600; color: ${statusDetail.color};">
-                ${statusDetail.label}
-              </div>
-              ${
-                order.rawAddress
-                  ? `<div style="font-size: 10px; color: #94a3b8; margin-top: 4px; border-top: 1px solid #f1f5f9; padding-top: 3px;">${order.rawAddress}</div>`
-                  : ""
-              }
             </div>
           `);
           const targetMarker = routeMarkersDict.current[markerId];
@@ -680,7 +607,7 @@ export const MapView: React.FC<MapViewProps> = ({
       }
     });
 
-    // 4. Limpieza de marcadores que ya no están en las listas
+    // 3. Limpieza de marcadores que ya no están en las listas
     Object.keys(routeMarkersDict.current).forEach((id) => {
       if (!currentIds.has(id)) {
         const m = routeMarkersDict.current[id];
@@ -689,41 +616,23 @@ export const MapView: React.FC<MapViewProps> = ({
       }
     });
 
-    // 5. Dibujar la ruta entre paradas
-    if (!selectedOrder) {
+    // 4. Dibujar la ruta ("la culebra") entre las paradas del Route Builder (1 -> 2 -> 3...)
+    // Solo cuando los pedidos de la ruta cambien efectivamente, para no recalcular polilíneas durante el zoom
+    if (!selectedOrder || selectedOrdersFull.length >= 2) {
+      const currentRouteKey = selectedOrdersFull.map((o: any) => o.id).join(",");
       if (selectedOrdersFull.length >= 2) {
-        // En construcción de ruta con Route Builder
-        const currentRouteKey = selectedOrdersFull.map((o: any) => o.id).join(",");
         if (lastDrawnRouteIdsRef.current !== currentRouteKey) {
           lastDrawnRouteIdsRef.current = currentRouteKey;
           const routePoints = selectedOrdersFull
             .filter((o: any) => o.latitude !== null && o.longitude !== null)
             .map((o: any) => {
-              const item = validVisibleItems.find((v) => v.order.id === o.id && v.isRoute);
+              const item = visibleItems.find((v) => v.order.id === o.id && v.isRoute);
               return item ? getPos(item) : { lat: Number(o.latitude), lng: Number(o.longitude) };
             });
 
           if (routePoints.length >= 2) {
             drawMultiStopRoute(routePoints);
           } else {
-            clearRoute();
-          }
-        }
-      } else if (!isRouteBuilderActive && selectedRouteId !== "all" && selectedRouteId !== "unassigned") {
-        // Visualización de una ruta específica seleccionada en Torre de Control
-        const routeStops = validVisibleItems
-          .filter((item) => item.isRoute)
-          .sort((a, b) => (a.order.sequenceIndex ?? 0) - (b.order.sequenceIndex ?? 0));
-
-        const currentRouteKey = `route-${selectedRouteId}-${routeStops.map((i) => i.order.id).join(",")}`;
-        if (routeStops.length >= 2) {
-          if (lastDrawnRouteIdsRef.current !== currentRouteKey) {
-            lastDrawnRouteIdsRef.current = currentRouteKey;
-            drawMultiStopRoute(routeStops.map((item) => getPos(item)));
-          }
-        } else {
-          if (lastDrawnRouteIdsRef.current !== "") {
-            lastDrawnRouteIdsRef.current = "";
             clearRoute();
           }
         }
@@ -742,20 +651,7 @@ export const MapView: React.FC<MapViewProps> = ({
       });
       routeMarkersDict.current = {};
     };
-  }, [
-    googleMap,
-    selectedOrderIds,
-    isBuildingRoute,
-    allTodayOrders,
-    extraOrders,
-    onSelectOrderForRoute,
-    selectedOrder,
-    selectedRouteId,
-    selectedStatus,
-    mapZoom,
-    drawMultiStopRoute,
-    clearRoute,
-  ]);
+  }, [googleMap, selectedOrderIds, allTodayOrders, extraOrders, onSelectOrderForRoute, selectedOrder, mapZoom, drawMultiStopRoute, clearRoute]);
 
   const activeMapId = "DEMO_MAP_ID";
 
