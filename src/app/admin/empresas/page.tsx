@@ -40,6 +40,8 @@ export default function EmpresasPage() {
     name: "",
     tradeName: "",
     ruc: "",
+    managerId: "",
+    managerEmail: "",
   });
 
   const [form, setForm] = useState({
@@ -113,11 +115,14 @@ export default function EmpresasPage() {
   };
 
   const openEditTenant = (tenant: TenantRow) => {
+    const firstManager = tenant.users?.[0];
     setEditingTenant(tenant);
     setEditForm({
       name: tenant.name,
       tradeName: tenant.tradeName || "",
       ruc: tenant.ruc,
+      managerId: firstManager?.id || "",
+      managerEmail: firstManager?.email || "",
     });
   };
 
@@ -130,6 +135,9 @@ export default function EmpresasPage() {
         name: editForm.name,
         tradeName: editForm.tradeName,
         ruc: editForm.ruc,
+        ...(editForm.managerId
+          ? { managerId: editForm.managerId, managerEmail: editForm.managerEmail }
+          : {}),
       });
       toast.success("Empresa actualizada correctamente");
       setEditingTenant(null);
@@ -439,7 +447,7 @@ export default function EmpresasPage() {
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Editar Empresa</h3>
                 <p className="text-[11px] text-slate-400">
-                  Corrige la Razón Social, Nombre Comercial o RUC
+                  Corrige la Razón Social, Nombre Comercial, RUC o correo
                 </p>
               </div>
               <button
@@ -476,6 +484,20 @@ export default function EmpresasPage() {
                   className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#13131A]"
                 />
               </div>
+              {editForm.managerId && (
+                <div>
+                  <label className="block font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                    Correo electrónico *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={editForm.managerEmail}
+                    onChange={(e) => setEditForm({ ...editForm, managerEmail: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#13131A]"
+                  />
+                </div>
+              )}
               <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   type="button"
