@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 export const OrderSchema = z.object({
   id: z.string().uuid(),
@@ -32,6 +32,7 @@ export const RouteAssignmentSchema = z.object({
   order: OrderSchema.optional(),
   driverId: z.string().uuid().nullable().optional(),
   vehicleId: z.string().nullable().optional(),
+  routeId: z.string().nullable().optional(),
   date: z.string().or(z.date()),
   sequenceIndex: z.number().nullable().optional(),
   status: z.enum(["PENDING", "IN_TRANSIT", "DELIVERED", "OBSERVED"]),

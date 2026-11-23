@@ -6,12 +6,15 @@
 export const ROUTES = {
   LOGIN: "/login",
   ADMIN: {
+    EMPRESAS: "/admin/empresas",
+    PLATAFORMA_USUARIOS: "/admin/empresas/usuarios",
     TORRE_CONTROL: "/admin/torre-control",
     PEDIDOS: "/admin/pedidos",
     RUTAS: "/admin/rutas",
     CARGA_PEDIDOS: "/admin/carga-pedidos",
-    CHOFERES: "/admin/choferes",
+    FLOTA: "/admin/flota",
     CLIENTES: "/admin/clientes",
+    USUARIOS: "/admin/usuarios",
     CONFIGURACION: "/admin/configuracion",
   },
   SEGUIMIENTO: (code: string) => `/seguimiento/${code}`,
@@ -20,9 +23,12 @@ export const ROUTES = {
     ORDERS_IMPORT: "/orders/import",
     ROUTES: "/routes",
     DRIVERS: "/drivers",
+    VEHICLES: "/vehicles",
     SEDES: "/sedes",
     CLIENTS: "/clients",
     COMPANIES: "/customers/companies",
+    TENANTS: "/tenants",
+    USERS: "/users",
     PUBLIC_TRACKING: "/public/tracking",
     AUTH: {
       LOGIN: "/auth/login",
@@ -40,9 +46,18 @@ export const API_ENDPOINTS = ROUTES.API;
  * sueltos comparados a mano en distintos archivos.
  */
 export enum UserRole {
+  SYS_SUPERADMIN = "SYS_SUPERADMIN",
   SYS_ADMIN = "SYS_ADMIN",
+  SYS_COORDINATOR = "SYS_COORDINATOR",
   SYS_OPERATOR = "SYS_OPERATOR",
   SYS_DRIVER = "SYS_DRIVER",
+}
+
+export function getHomeRouteForRole(role?: string | null): string {
+  if (role === UserRole.SYS_SUPERADMIN) {
+    return ROUTES.ADMIN.EMPRESAS;
+  }
+  return ROUTES.ADMIN.TORRE_CONTROL;
 }
 
 /**
@@ -61,11 +76,14 @@ export const PUBLIC_ROUTES: readonly string[] = [
  * importa que la ruta esté declarada aquí con los roles correctos.
  */
 export const ROUTE_ACCESS: Record<string, readonly UserRole[]> = {
-  [ROUTES.ADMIN.TORRE_CONTROL]: [UserRole.SYS_ADMIN, UserRole.SYS_OPERATOR],
-  [ROUTES.ADMIN.PEDIDOS]: [UserRole.SYS_ADMIN, UserRole.SYS_OPERATOR],
-  [ROUTES.ADMIN.RUTAS]: [UserRole.SYS_ADMIN, UserRole.SYS_OPERATOR],
-  [ROUTES.ADMIN.CARGA_PEDIDOS]: [UserRole.SYS_ADMIN, UserRole.SYS_OPERATOR],
-  [ROUTES.ADMIN.CHOFERES]: [UserRole.SYS_ADMIN, UserRole.SYS_OPERATOR],
-  [ROUTES.ADMIN.CLIENTES]: [UserRole.SYS_ADMIN, UserRole.SYS_OPERATOR],
+  [ROUTES.ADMIN.EMPRESAS]: [UserRole.SYS_SUPERADMIN],
+  [ROUTES.ADMIN.PLATAFORMA_USUARIOS]: [UserRole.SYS_SUPERADMIN],
+  [ROUTES.ADMIN.TORRE_CONTROL]: [UserRole.SYS_ADMIN, UserRole.SYS_COORDINATOR, UserRole.SYS_OPERATOR],
+  [ROUTES.ADMIN.PEDIDOS]: [UserRole.SYS_ADMIN, UserRole.SYS_COORDINATOR, UserRole.SYS_OPERATOR],
+  [ROUTES.ADMIN.RUTAS]: [UserRole.SYS_ADMIN, UserRole.SYS_COORDINATOR, UserRole.SYS_OPERATOR],
+  [ROUTES.ADMIN.CARGA_PEDIDOS]: [UserRole.SYS_ADMIN, UserRole.SYS_COORDINATOR, UserRole.SYS_OPERATOR],
+  [ROUTES.ADMIN.FLOTA]: [UserRole.SYS_ADMIN, UserRole.SYS_COORDINATOR, UserRole.SYS_OPERATOR],
+  [ROUTES.ADMIN.CLIENTES]: [UserRole.SYS_ADMIN, UserRole.SYS_COORDINATOR, UserRole.SYS_OPERATOR],
+  [ROUTES.ADMIN.USUARIOS]: [UserRole.SYS_ADMIN],
   [ROUTES.ADMIN.CONFIGURACION]: [UserRole.SYS_ADMIN],
 };

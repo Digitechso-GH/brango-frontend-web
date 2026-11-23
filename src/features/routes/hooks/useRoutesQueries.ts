@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { rutasApi } from "../api/rutas.api";
+import { routesApi } from "../api/routes.api";
 import { toast } from "sonner";
 
 export const useRoutesQuery = (params?: {
@@ -12,14 +12,14 @@ export const useRoutesQuery = (params?: {
 }) => {
   return useQuery({
     queryKey: ["admin-routes", params],
-    queryFn: () => rutasApi.getRoutes(params),
+    queryFn: () => routesApi.getRoutes(params),
   });
 };
 
 export const useRouteDetailQuery = (id: string | null) => {
   return useQuery({
     queryKey: ["admin-route-detail", id],
-    queryFn: () => (id ? rutasApi.getRouteDetail(id) : null),
+    queryFn: () => (id ? routesApi.getRouteDetail(id) : null),
     enabled: !!id,
   });
 };
@@ -28,7 +28,7 @@ export const useDeleteRouteMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => rutasApi.deleteRoute(id),
+    mutationFn: (id: string) => routesApi.deleteRoute(id),
     onSuccess: () => {
       toast.success("Ruta eliminada correctamente");
       queryClient.invalidateQueries({ queryKey: ["admin-routes"] });

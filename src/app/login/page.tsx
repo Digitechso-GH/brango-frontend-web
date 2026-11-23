@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authApi } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { ROUTES } from "@/shared/constants/routes";
-import { IconMail, IconLock, IconArrowRight, IconLoader2 } from "@tabler/icons-react";
+import { ROUTES, getHomeRouteForRole } from "@/shared/constants/routes";
+import { IconMail, IconLock, IconArrowRight, IconLoader2, IconEye, IconEyeOff } from "@tabler/icons-react";
 
 export default function LoginPage() {
   const { setAuth } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,10 +32,12 @@ export default function LoginPage() {
       });
       setAuth(res.token, res.refreshToken, res.user);
       toast.success(`¡Bienvenido de nuevo, ${res.user.name}!`);
-      window.location.href = ROUTES.ADMIN.TORRE_CONTROL;
+      window.location.href = getHomeRouteForRole(res.user.role);
     } catch (err: any) {
       console.error("Login error:", err);
-      const msg = err.response?.data?.message || "Credenciales incorrectas. Verifique e intente nuevamente.";
+      const msg = !err.response
+        ? "No se pudo conectar con el servidor backend. Verifica que esté encendido."
+        : err.response?.data?.message || "Credenciales incorrectas. Verifique e intente nuevamente.";
       toast.error(msg);
     } finally {
       setIsLoading(false);
@@ -89,13 +92,22 @@ export default function LoginPage() {
             <div className="relative flex items-center">
               <IconLock size={18} className="absolute left-3.5 text-slate-400 pointer-events-none" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/10 transition-all font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/10 transition-all font-medium"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+                tabIndex={-1}
+                aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+              >
+                {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
+              </button>
             </div>
           </div>
 

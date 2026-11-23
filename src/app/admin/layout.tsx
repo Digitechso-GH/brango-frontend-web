@@ -11,12 +11,14 @@ import {
   IconMap2,
   IconBox,
   IconRoute,
-  IconSteeringWheel,
+  IconTruck,
   IconSettings,
   IconLogout,
   IconMapPinFilled,
   IconMenu2,
-  IconX
+  IconX,
+  IconBuilding,
+  IconUsers,
 } from "@tabler/icons-react";
 import { ThemeToggle } from "@/shared/components/ui/ThemeToggle";
 import { useUIStore } from "@/shared/store/useUIStore";
@@ -47,23 +49,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     window.location.href = ROUTES.LOGIN;
   };
 
-  const menuGroups: MenuGroup[] = [
-    {
-      title: "OPERACIÓN",
-      items: [
-        { label: "Torre de Control", path: ROUTES.ADMIN.TORRE_CONTROL, icon: <IconMap2 size={20} /> },
-        { label: "Pedidos", path: ROUTES.ADMIN.PEDIDOS, icon: <IconBox size={20} /> },
-        { label: "Rutas", path: ROUTES.ADMIN.RUTAS, icon: <IconRoute size={20} /> },
-        { label: "Choferes", path: ROUTES.ADMIN.CHOFERES, icon: <IconSteeringWheel size={20} /> },
-      ],
-    },
-    {
-      title: "SISTEMA",
-      items: [
-        { label: "Configuración", path: ROUTES.ADMIN.CONFIGURACION, icon: <IconSettings size={20} /> },
-      ],
-    },
-  ];
+  const isSuperAdmin = user?.role === ROLES.SYS_SUPERADMIN;
+  const isManager = user?.role === ROLES.SYS_ADMIN;
+
+  const menuGroups: MenuGroup[] = isSuperAdmin
+    ? [
+        {
+          title: "PLATAFORMA",
+          items: [
+            { label: "Empresas", path: ROUTES.ADMIN.EMPRESAS, icon: <IconBuilding size={20} /> },
+            { label: "Usuarios", path: ROUTES.ADMIN.PLATAFORMA_USUARIOS, icon: <IconUsers size={20} /> },
+          ],
+        },
+      ]
+    : [
+        {
+          title: "OPERACIÓN",
+          items: [
+            { label: "Torre de Control", path: ROUTES.ADMIN.TORRE_CONTROL, icon: <IconMap2 size={20} /> },
+            { label: "Pedidos", path: ROUTES.ADMIN.PEDIDOS, icon: <IconBox size={20} /> },
+            { label: "Rutas", path: ROUTES.ADMIN.RUTAS, icon: <IconRoute size={20} /> },
+            { label: "Flota", path: ROUTES.ADMIN.FLOTA, icon: <IconTruck size={20} /> },
+          ],
+        },
+        ...(isManager
+          ? [
+              {
+                title: "SISTEMA",
+                items: [
+                  { label: "Usuarios y Accesos", path: ROUTES.ADMIN.USUARIOS, icon: <IconUsers size={20} /> },
+                  { label: "Configuración", path: ROUTES.ADMIN.CONFIGURACION, icon: <IconSettings size={20} /> },
+                ],
+              },
+            ]
+          : []),
+      ];
 
   const activeItem = menuGroups.flatMap(g => g.items).find(i => pathname.startsWith(i.path));
   const pageTitle = activeItem ? activeItem.label : "Panel de Control";
@@ -72,11 +92,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     ? user.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
     : "AD";
 
-  const userRoleLabel = user?.role === ROLES.SYS_ADMIN
-    ? "Administrador"
-    : user?.role === ROLES.SYS_OPERATOR
-      ? "Operador Despachador"
-      : "Usuario";
+  const userRoleLabel =
+    user?.role === ROLES.SYS_SUPERADMIN
+      ? "Super Administrador"
+      : user?.role === ROLES.SYS_ADMIN
+        ? "Gerente de Empresa"
+        : user?.role === ROLES.SYS_COORDINATOR || user?.role === ROLES.SYS_OPERATOR
+          ? "Coordinador"
+          : "Usuario";
 
   if (!hasHydrated) {
     return (
@@ -190,6 +213,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <div className="flex items-center gap-3">
+            {user?.tenantName && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 text-[11px] font-bold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
+                <IconBuilding size={14} className="text-blue-600" />
+                {user.tenantName}
+              </span>
+            )}
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer border border-slate-200 dark:border-slate-800"

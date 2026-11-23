@@ -1,9 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useAvailableDriversQuery, usePedidosTodayQuery } from "@/features/pedidos/hooks/usePedidosQueries";
-import { useRoutesQuery } from "@/features/rutas/hooks/useRutasQueries";
-import { rutasApi } from "@/features/rutas/api/rutas.api";
+import {
+  useAvailableDriversQuery,
+  useAvailableVehiclesQuery,
+  usePedidosTodayQuery,
+} from "@/features/pedidos/hooks/usePedidosQueries";
+import { useRoutesQuery } from "@/features/routes/hooks/useRoutesQueries";
+import { rutasApi } from "@/features/routes/api/routes.api";
 import {
   IconMapPin,
   IconGripVertical,
@@ -11,6 +15,7 @@ import {
   IconX,
   IconDeviceFloppy,
   IconSteeringWheel,
+  IconTruck,
   IconCalendar,
   IconArrowLeft,
   IconRoute,
@@ -28,6 +33,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ORDER_STATUS } from "@/shared/constants/order-status";
 import { ROUTE_STATUS, ROUTE_STATUS_DETAILS, RouteStatus } from "@/shared/constants/route-status";
 import { getLocalTodayString, formatLocalDate } from "@/shared/utils/date";
+import { LICENSE_CATEGORY_LABELS } from "@/features/drivers/constants/drivers.constants";
 
 interface RouteBuilderPanelProps {
   onRouteSaved?: () => void;
@@ -58,10 +64,22 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   const [editingRouteId, setEditingRouteId] = useState<string | null>(initialRouteId || null);
   const [editingRouteSequence, setEditingRouteSequence] = useState<number | null>(null);
   const [loadedOrders, setLoadedOrders] = useState<any[]>([]);
-  const [currentRouteDriver, setCurrentRouteDriver] = useState<{ id: string; name: string; unit?: string | null } | null>(null);
+  const [currentRouteDriver, setCurrentRouteDriver] = useState<{
+    id: string;
+    name: string;
+    licenseCategory?: string | null;
+  } | null>(null);
+  const [currentRouteVehicle, setCurrentRouteVehicle] = useState<{
+    id: string;
+    plate: string;
+    brand?: string | null;
+    model?: string | null;
+    capacityKg?: number | null;
+  } | null>(null);
 
   const [routeName, setRouteName] = useState("");
   const [driverId, setDriverId] = useState("");
+  const [vehicleId, setVehicleId] = useState("");
   const [date, setDate] = useState(todayStr);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
@@ -76,20 +94,53 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
     (r: any) => r.status === ROUTE_STATUS.PENDING && getLocalTodayString(r.date) >= todayStr
   );
 
-  const { data: driversResponse } = useAvailableDriversQuery(date);
+  const { data: driversResponse } = useAvailableDriversQuery(
+    date,
+    true,
+    editingRouteId || undefined,
+  );
   const availableDrivers = Array.isArray(driversResponse) ? driversResponse : [];
 
-  // Al editar una ruta, si el chofer ya asignado fue excluido por el backend por tener ruta en esa fecha, lo agregamos como opción disponible
-  const effectiveDrivers: Array<{ id: string; name: string; unit?: string | null }> = [
-    ...availableDrivers.filter((d): d is NonNullable<typeof d> => Boolean(d)),
-  ];
+  const { data: vehiclesResponse } = useAvailableVehiclesQuery(
+    date,
+    true,
+    editingRouteId || undefined,
+  );
+  const availableVehicles = Array.isArray(vehiclesResponse) ? vehiclesResponse : [];
+
+  const effectiveDrivers: Array<{
+    id: string;
+    name: string;
+    licenseCategory?: string | null;
+  }> = [...availableDrivers.filter((d): d is NonNullable<typeof d> => Boolean(d))];
   if (currentRouteDriver && !effectiveDrivers.some((d) => d.id === currentRouteDriver.id)) {
     effectiveDrivers.unshift(currentRouteDriver);
   }
 
-  const driverOptions = effectiveDrivers.map((d: any) => ({
-    label: `${d.name}${d.unit ? ` (${d.unit})` : ""}`,
-    value: d.id,
+  const effectiveVehicles: Array<{
+    id: string;
+    plate: string;
+    brand?: string | null;
+    model?: string | null;
+    capacityKg?: number | null;
+  }> = [...availableVehicles.filter((v): v is NonNullable<typeof v> => Boolean(v))];
+  if (currentRouteVehicle && !effectiveVehicles.some((v) => v.id === currentRouteVehicle.id)) {
+    effectiveVehicles.unshift(currentRouteVehicle);
+  }
+
+  const driverOptions = effectiveDrivers.map((d: any) => {
+    const lic = LICENSE_CATEGORY_LABELS[d.licenseCategory] || d.licenseCategory;
+    return {
+      label: `${d.name}${lic ? ` (${lic})` : ""}`,
+      value: d.id,
+    };
+  });
+
+  const vehicleOptions = effectiveVehicles.map((v) => ({
+    label: `${v.plate}${v.brand || v.model ? ` · ${[v.brand, v.model].filter(Boolean).join(" ")}` : ""}${
+      v.capacityKg ? ` (${v.capacityKg} kg)` : ""
+    }`,
+    value: v.id,
   }));
 
   const { data: ordersResponse } = usePedidosTodayQuery();
@@ -156,16 +207,29 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
       setEditingRouteSequence(detail.sequenceIndex);
       setRouteName(detail.name || "");
       setDriverId(detail.driverId || "");
+      setVehicleId(detail.vehicleId || "");
       setDate(detail.date ? detail.date.slice(0, 10) : todayStr);
 
       if (detail.driver) {
         setCurrentRouteDriver({
           id: detail.driverId,
           name: detail.driver.user.name,
-          unit: detail.driver.unit,
+          licenseCategory: detail.driver.licenseCategory,
         });
       } else {
         setCurrentRouteDriver(null);
+      }
+
+      if (detail.vehicle) {
+        setCurrentRouteVehicle({
+          id: detail.vehicle.id,
+          plate: detail.vehicle.plate,
+          brand: detail.vehicle.brand,
+          model: detail.vehicle.model,
+          capacityKg: detail.vehicle.capacityKg,
+        });
+      } else {
+        setCurrentRouteVehicle(null);
       }
 
       const assignments = detail.assignments || [];
@@ -194,8 +258,10 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
     setEditingRouteId(null);
     setEditingRouteSequence(null);
     setCurrentRouteDriver(null);
+    setCurrentRouteVehicle(null);
     setRouteName("");
     setDriverId("");
+    setVehicleId("");
     setDate(todayStr);
     setLoadedOrders([]);
     onSetExtraOrders?.([]);
@@ -208,8 +274,10 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
     setEditingRouteId(null);
     setEditingRouteSequence(null);
     setCurrentRouteDriver(null);
+    setCurrentRouteVehicle(null);
     setRouteName("");
     setDriverId("");
+    setVehicleId("");
     setLoadedOrders([]);
     onSetExtraOrders?.([]);
     onSetSelectedOrders([]);
@@ -263,6 +331,10 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
       toast.error("Debes seleccionar un chofer disponible");
       return;
     }
+    if (!vehicleId) {
+      toast.error("Debes seleccionar un vehículo disponible");
+      return;
+    }
     if (selectedOrderIds.length === 0) {
       toast.error("Debes agregar al menos un pedido a la ruta");
       return;
@@ -273,6 +345,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
       const payload = {
         name: routeName.trim(),
         driverId,
+        vehicleId,
         date: date,
         assignments: selectedOrderIds.map((id) => ({ orderId: id })),
       };
@@ -290,6 +363,7 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
         queryClient.invalidateQueries({ queryKey: ["orders-today"] }),
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
         queryClient.invalidateQueries({ queryKey: ["available-drivers"] }),
+        queryClient.invalidateQueries({ queryKey: ["available-vehicles"] }),
         queryClient.invalidateQueries({ queryKey: ["admin-routes"] }),
       ]);
 
@@ -303,7 +377,12 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
   };
 
   const isFormValid =
-    routeName.trim().length > 0 && !!driverId && !!date && date >= todayStr && selectedOrderIds.length > 0;
+    routeName.trim().length > 0 &&
+    !!driverId &&
+    !!vehicleId &&
+    !!date &&
+    date >= todayStr &&
+    selectedOrderIds.length > 0;
 
   // ==========================================
   // VISTA 1: LISTADO DE RUTAS (MASTER)
@@ -475,12 +554,37 @@ export const RouteBuilderPanel: React.FC<RouteBuilderPanelProps> = ({
                   value={driverId}
                   onChange={setDriverId}
                   options={driverOptions}
-                  placeholder="Seleccionar..."
+                  placeholder={driverOptions.length === 0 ? "Sin choferes disponibles" : "Seleccionar..."}
                   size="sm"
                   icon={<IconSteeringWheel size={14} className="text-slate-400" />}
                   className="w-full"
                 />
               </div>
+            </div>
+
+            {/* Vehículo */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
+                Vehículo Disponible <span className="text-rose-500">*</span>
+              </label>
+              <Select
+                value={vehicleId}
+                onChange={setVehicleId}
+                options={vehicleOptions}
+                placeholder={vehicleOptions.length === 0 ? "Sin vehículos disponibles para esta fecha" : "Seleccionar vehículo..."}
+                size="sm"
+                icon={<IconTruck size={14} className="text-slate-400" />}
+                className="w-full"
+              />
+              {(driverOptions.length === 0 || vehicleOptions.length === 0) && (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+                  {driverOptions.length === 0 && vehicleOptions.length === 0
+                    ? "No hay choferes ni vehículos disponibles para la fecha seleccionada."
+                    : driverOptions.length === 0
+                      ? "No hay choferes disponibles para la fecha seleccionada."
+                      : "No hay vehículos disponibles para la fecha seleccionada."}
+                </p>
+              )}
             </div>
           </div>
         )}

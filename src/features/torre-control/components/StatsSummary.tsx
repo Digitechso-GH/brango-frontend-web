@@ -2,7 +2,7 @@
 
 import React from "react";
 import { usePedidosTodayQuery } from "@/features/pedidos/hooks/usePedidosQueries";
-import { useRoutesQuery } from "@/features/rutas/hooks/useRutasQueries";
+import { useRoutesQuery } from "@/features/routes/hooks/useRoutesQueries";
 import { 
   IconRoute, 
   IconTruckDelivery, 

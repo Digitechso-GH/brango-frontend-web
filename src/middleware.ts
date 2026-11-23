@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { PUBLIC_ROUTES, ROUTE_ACCESS, ROUTES, UserRole } from "@/shared/constants/routes";
+import { PUBLIC_ROUTES, ROUTE_ACCESS, ROUTES, UserRole, getHomeRouteForRole } from "@/shared/constants/routes";
 import { decodeJwt } from "jose";
 
 export function middleware(request: NextRequest) {
@@ -24,7 +24,7 @@ export function middleware(request: NextRequest) {
   // 1. Manejo de la raíz /
   if (pathname === "/") {
     if (payload) {
-      return NextResponse.redirect(new URL(ROUTES.ADMIN.TORRE_CONTROL, request.url));
+      return NextResponse.redirect(new URL(getHomeRouteForRole(payload.role as string), request.url));
     }
     return NextResponse.redirect(new URL(ROUTES.LOGIN, request.url));
   }
@@ -33,7 +33,7 @@ export function middleware(request: NextRequest) {
   const isPublic = PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(p + "/"));
   if (isPublic) {
     if (pathname === ROUTES.LOGIN && payload) {
-      return NextResponse.redirect(new URL(ROUTES.ADMIN.TORRE_CONTROL, request.url));
+      return NextResponse.redirect(new URL(getHomeRouteForRole(payload.role as string), request.url));
     }
     return NextResponse.next();
   }

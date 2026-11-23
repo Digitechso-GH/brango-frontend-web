@@ -123,6 +123,11 @@ api.interceptors.response.use(
         processQueue(refreshErr, null);
         if (typeof window !== "undefined") {
           localStorage.removeItem("auth-storage");
+          try {
+            await axios.post(`${apiUrl}${API_ENDPOINTS.AUTH.LOGOUT}`, {}, { withCredentials: true });
+          } catch {
+            // Ignorar si falla el logout en red
+          }
           document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax;";
           if (!window.location.pathname.includes(ROUTES.LOGIN)) {
             window.location.href = ROUTES.LOGIN;

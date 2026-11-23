@@ -51,6 +51,7 @@ const normalizeOrder = (raw: any) => {
     routeAssignmentId: activeAssignment?.id || null,
     driverId: canonicalDriverId,
     driver: driverObj,
+    routeId: activeAssignment?.routeId || null,
     status: status,
     sequenceIndex: sequenceIndex,
     reasonText: reasonText,
@@ -112,8 +113,10 @@ export const pedidosApi = {
     return Array.isArray(rawData) ? rawData.map(normalizeDriver) : [];
   },
 
-  getAvailableDrivers: async (date?: string) => {
-    const params = date ? { date } : {};
+  getAvailableDrivers: async (date?: string, excludeRouteId?: string) => {
+    const params: Record<string, string> = {};
+    if (date) params.date = date;
+    if (excludeRouteId) params.excludeRouteId = excludeRouteId;
     const res = await api.get(`${API_ENDPOINTS.DRIVERS}/available`, { params });
     const rawData = res.data.data ?? res.data ?? [];
     return Array.isArray(rawData) ? rawData.map(normalizeDriver) : [];

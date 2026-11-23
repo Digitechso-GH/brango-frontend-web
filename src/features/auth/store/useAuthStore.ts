@@ -6,6 +6,9 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  tenantId?: string | null;
+  tenantName?: string | null;
+  planTier?: string | null;
   driverId?: string;
   unit?: string;
 }

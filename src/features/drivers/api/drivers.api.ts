@@ -1,7 +1,7 @@
 import api from "@/shared/api/axios";
 import { API_ENDPOINTS } from "@/shared/constants/api-endpoints";
 
-export const choferesApi = {
+export const driversApi = {
   getDrivers: async () => {
     const res = await api.get(API_ENDPOINTS.DRIVERS);
     return res.data.data ?? res.data ?? [];

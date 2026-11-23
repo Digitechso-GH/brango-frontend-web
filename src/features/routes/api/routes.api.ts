@@ -49,14 +49,23 @@ export interface RouteDetail {
   id: string;
   name: string | null;
   driverId: string;
+  vehicleId?: string | null;
   driver: {
     id: string;
     unit?: string | null;
+    licenseCategory?: string | null;
     user: {
       name: string;
       email: string;
     };
   };
+  vehicle?: {
+    id: string;
+    plate: string;
+    brand?: string | null;
+    model?: string | null;
+    capacityKg?: number | null;
+  } | null;
   date: string;
   sequenceIndex: number;
   status: RouteStatus;
@@ -68,7 +77,7 @@ export interface RouteDetail {
   updatedAt: string;
 }
 
-export const rutasApi = {
+export const routesApi = {
   getRoutes: async (params?: {
     date?: string;
     fromDate?: string;
@@ -108,3 +117,5 @@ export const rutasApi = {
     return res.data.data ?? res.data;
   },
 };
+
+export const rutasApi = routesApi;

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pedidosApi } from "../api/pedidos.api";
+import { vehiclesApi } from "@/features/vehicles/api/vehicles.api";
 
 export const usePedidosQuery = (params?: { search?: string; page?: number; limit?: number; driverId?: string }) => {
   return useQuery({
@@ -23,10 +24,26 @@ export const useDriversQuery = (enabled: boolean = true) => {
   });
 };
 
-export const useAvailableDriversQuery = (date?: string, enabled: boolean = true) => {
+export const useAvailableDriversQuery = (
+  date?: string,
+  enabled: boolean = true,
+  excludeRouteId?: string,
+) => {
   return useQuery({
-    queryKey: ["available-drivers", date],
-    queryFn: () => pedidosApi.getAvailableDrivers(date),
+    queryKey: ["available-drivers", date, excludeRouteId],
+    queryFn: () => pedidosApi.getAvailableDrivers(date, excludeRouteId),
+    enabled,
+  });
+};
+
+export const useAvailableVehiclesQuery = (
+  date?: string,
+  enabled: boolean = true,
+  excludeRouteId?: string,
+) => {
+  return useQuery({
+    queryKey: ["available-vehicles", date, excludeRouteId],
+    queryFn: () => vehiclesApi.getAvailableVehicles(date, excludeRouteId),
     enabled,
   });
 };

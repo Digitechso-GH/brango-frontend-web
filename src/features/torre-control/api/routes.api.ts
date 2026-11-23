@@ -2,11 +2,26 @@ import api from "@/shared/api/axios";
 import { API_ENDPOINTS } from "@/shared/constants/api-endpoints";
 
 export const routesApi = {
-  createRoute: async (payload: { name?: string; driverId: string; date: string; assignments: { orderId: string }[] }) => {
+  createRoute: async (payload: {
+    name?: string;
+    driverId: string;
+    vehicleId?: string;
+    date: string;
+    assignments: { orderId: string }[];
+  }) => {
     const res = await api.post(API_ENDPOINTS.ROUTES, payload);
     return res.data.data ?? res.data;
   },
-  updateRoute: async (id: string, payload: { name?: string; driverId?: string; date?: string; assignments?: { orderId: string }[] }) => {
+  updateRoute: async (
+    id: string,
+    payload: {
+      name?: string;
+      driverId?: string;
+      vehicleId?: string;
+      date?: string;
+      assignments?: { orderId: string }[];
+    },
+  ) => {
     const res = await api.patch(`${API_ENDPOINTS.ROUTES}/${id}`, payload);
     return res.data.data ?? res.data;
   },

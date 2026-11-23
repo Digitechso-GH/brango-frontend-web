@@ -6,7 +6,7 @@ import {
   useRoutesQuery,
   useRouteDetailQuery,
   useDeleteRouteMutation
-} from "@/features/rutas/hooks/useRutasQueries";
+} from "@/features/routes/hooks/useRoutesQueries";
 import { useDriversQuery } from "@/features/pedidos/hooks/usePedidosQueries";
 import {
   ROUTE_STATUS,
