@@ -28,8 +28,8 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
   const [selectedRouteId, setSelectedRouteId] = useState("all");
   const [status, setStatus] = useState("all");
 
-  // Control de acordeones expandidos por ruta (por defecto abiertas)
-  const [expandedRoutes, setExpandedRoutes] = useState<Record<string, boolean>>({});
+  // Control de acordeón expandido: solo una ruta abierta a la vez (por defecto ninguna)
+  const [expandedRouteId, setExpandedRouteId] = useState<string | null>(null);
 
   const todayStr = useMemo(() => getLocalTodayString(), []);
 
@@ -121,14 +121,11 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
   }, [routes, allTodayOrders, status, todayStr]);
 
   const toggleRouteAccordion = (routeId: string) => {
-    setExpandedRoutes((prev) => ({
-      ...prev,
-      [routeId]: prev[routeId] === undefined ? false : !prev[routeId],
-    }));
+    setExpandedRouteId((prev) => (prev === routeId ? null : routeId));
   };
 
   const isRouteExpanded = (routeId: string) => {
-    return expandedRoutes[routeId] !== false; // Abierto por defecto
+    return expandedRouteId === routeId;
   };
 
   const visibleRoutes = useMemo(() => {
