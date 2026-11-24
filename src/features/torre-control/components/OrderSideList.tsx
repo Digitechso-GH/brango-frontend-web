@@ -15,6 +15,7 @@ import {
   IconChevronDown,
   IconChevronRight,
   IconInbox,
+  IconCheck,
 } from "@tabler/icons-react";
 
 interface OrderSideListProps {
@@ -135,28 +136,26 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
     return routesWithOrders.filter((r) => r.id === selectedRouteId);
   }, [routesWithOrders, selectedRouteId]);
 
-  // Estilo exacto de la Imagen 2: fila minimalista, sin caja de borde, con sombreado alternado suave
-  const renderOrderItem = (order: any, index: number = 0) => {
+  // Render del Pedido idéntico a la imagen:
+  // Check/Icono + #Código primero + Nombre Cliente + Hora
+  // Debajo Dirección limpia
+  const renderOrderItem = (order: any) => {
     const isCompany = order.recipientCustomerType === "COMPANY";
     const clientName = isCompany
       ? order.customer?.name ?? "Cliente"
       : order.recipientName ?? "Cliente";
 
-    const orderStatusDetail =
-      ORDER_STATUS_DETAILS[order.status] || ORDER_STATUS_DETAILS.PENDING;
-
+    const isDelivered = order.status === "DELIVERED";
     const timeStr = formatLocalTime(order.createdAt || order.updatedAt);
     const orderCode = order.code || (order.id || "").slice(0, 5);
 
-    // Dirección legible; si es enlace de mapa no resuelto, mostrar texto
+    // Dirección legible
     const address =
       order.formattedAddress && !order.formattedAddress.startsWith("http")
         ? order.formattedAddress
         : order.rawAddress && !order.rawAddress.startsWith("http")
         ? order.rawAddress
-        : order.formattedAddress || order.rawAddress;
-
-    const isZebra = index % 2 === 1;
+        : null;
 
     return (
       <div
@@ -166,42 +165,49 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
           e.stopPropagation();
           onSelectOrder?.(order.id);
         }}
-        className={`w-full flex flex-col gap-1 px-3 py-2.5 rounded-xl transition-colors cursor-pointer select-none group ${
-          isZebra
-            ? "bg-slate-50/90 dark:bg-white/[0.035]"
-            : "bg-transparent"
-        } hover:bg-slate-100/80 dark:hover:bg-white/[0.08]`}
+        className="w-full flex flex-col gap-1 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer select-none group"
       >
-        {/* Línea 1: #Código  NOMBRE_CLIENTE         BadgeEstado   Hora */}
+        {/* Línea 1: Check/Icono + #Código + Nombre Cliente        Hora */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="text-xs font-mono font-medium text-slate-400 dark:text-slate-500 shrink-0">
-              #{orderCode}
-            </span>
-            <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-              {clientName}
-            </span>
+            {/* Círculo indicador / Check si entregado */}
+            <div
+              className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] ${
+                isDelivered
+                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                  : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+              }`}
+            >
+              {isDelivered ? (
+                <IconCheck size={12} stroke={2.5} />
+              ) : (
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />
+              )}
+            </div>
+
+            {/* #Código PRIMERO, luego Nombre Cliente */}
+            <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
+              <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                #{orderCode}
+              </span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                {clientName}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <span
-              className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${orderStatusDetail.badgeBg} ${orderStatusDetail.badgeText}`}
-            >
-              {orderStatusDetail.label}
+          {/* Hora */}
+          {timeStr && (
+            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 shrink-0">
+              {timeStr}
             </span>
-            {timeStr && (
-              <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                {timeStr}
-              </span>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Línea 2: Dirección o Guía */}
+        {/* Línea 2: Dirección limpia debajo */}
         {address && (
-          <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate pl-6">
+          <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate pl-7">
             {address}
-            {order.waybill && ` · Guía: ${order.waybill}`}
           </div>
         )}
       </div>
@@ -312,8 +318,8 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
         )}
       </div>
 
-      {/* 5. Lista de Contenido */}
-      <div className="flex-1 overflow-y-auto p-3 custom-scrollbar flex flex-col gap-2">
+      {/* 5. Lista de Contenido (Tarjeta con sombra limpia por ruta) */}
+      <div className="flex-1 overflow-y-auto p-3 custom-scrollbar flex flex-col gap-3">
         {isLoading ? (
           <div className="text-center py-8 text-xs text-gray-400">Cargando operación...</div>
         ) : activeTab === "routes" ? (
@@ -331,71 +337,74 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
                   ? Math.round((route.deliveredCount / route.totalOrders) * 100)
                   : 0;
               const hasOrders = route.filteredOrders.length > 0;
+              const isAllDelivered = percent === 100 && route.totalOrders > 0;
 
               return (
-                <div key={route.id} className="flex flex-col">
-                  {/* Fila Cabecera de la Ruta */}
-                  <button
-                    type="button"
+                <div
+                  key={route.id}
+                  className="bg-slate-50/80 dark:bg-white/[0.035] rounded-2xl p-3.5 flex flex-col gap-2.5 transition-all"
+                >
+                  {/* Cabecera de la Ruta: Flecha + Título + Chofer/Estado + Badge */}
+                  <div
                     onClick={() => toggleRouteAccordion(route.id)}
-                    className="w-full text-left py-2 px-1.5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-colors cursor-pointer select-none"
+                    className="flex items-start justify-between gap-2 cursor-pointer select-none"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      {expanded ? (
-                        <IconChevronDown size={16} className="text-slate-600 dark:text-slate-300 shrink-0" />
-                      ) : (
-                        <IconChevronRight size={16} className="text-slate-400 shrink-0" />
-                      )}
+                    <div className="flex items-start gap-2 min-w-0 flex-1">
+                      <div className="pt-0.5 text-slate-400 shrink-0">
+                        {expanded ? (
+                          <IconChevronDown size={16} />
+                        ) : (
+                          <IconChevronRight size={16} />
+                        )}
+                      </div>
                       <div className="flex flex-col min-w-0 flex-1">
                         <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
                           {route.name || `Ruta #${route.sequenceIndex ?? ""}`}
                         </span>
                         <span className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                          {route.driverName || "Sin chofer"} · {route.deliveredCount} de {route.totalOrders}
+                          {route.driverName || "Sin chofer"} · {route.deliveredCount} de {route.totalOrders}{" "}
+                          {isAllDelivered ? "entregado" : "pedidos"}
                         </span>
                       </div>
                     </div>
 
-                    {/* Barra de progreso + Badge de estado */}
-                    <div className="flex items-center gap-2.5 shrink-0">
-                      <div className="w-14 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                      <span
-                        className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 ${
-                          percent === 100
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/50"
-                            : route.deliveredCount > 0
-                            ? "bg-blue-100/70 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-                            : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                        }`}
-                      >
-                        {percent === 100
-                          ? "Entregado"
+                    {/* Badge de estado de la ruta */}
+                    <span
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 ${
+                        isAllDelivered
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/50"
                           : route.deliveredCount > 0
-                          ? "En curso"
-                          : "Pendiente"}
-                      </span>
-                    </div>
-                  </button>
+                          ? "bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                          : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                      }`}
+                    >
+                      {isAllDelivered
+                        ? "Entregado"
+                        : route.deliveredCount > 0
+                        ? "En curso"
+                        : "Pendiente"}
+                    </span>
+                  </div>
 
-                  {/* Lista de Pedidos de la Ruta idéntica a la Imagen 2 */}
+                  {/* Barra de progreso de la Ruta continua a lo ancho */}
+                  <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        isAllDelivered ? "bg-emerald-500" : "bg-blue-600"
+                      }`}
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+
+                  {/* Lista de Pedidos desplegados dentro de la tarjeta */}
                   {expanded && (
-                    <div className="relative pl-3.5 ml-1 flex flex-col gap-0.5 pt-1 pb-1">
-                      {/* Barra vertical azul */}
-                      <div className="absolute left-1 top-1.5 bottom-1.5 w-[3.5px] bg-blue-600 rounded-full" />
-
+                    <div className="flex flex-col gap-1 pt-1">
                       {!hasOrders ? (
-                        <div className="py-2.5 px-3 text-xs text-slate-400">
+                        <div className="py-2 text-xs text-slate-400 text-center">
                           Ningún pedido coincide con el filtro.
                         </div>
                       ) : (
-                        route.filteredOrders.map((order: any, idx: number) =>
-                          renderOrderItem(order, idx)
-                        )
+                        route.filteredOrders.map((order: any) => renderOrderItem(order))
                       )}
                     </div>
                   )}
@@ -411,8 +420,8 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
               <span>Todos los pedidos de hoy tienen ruta asignada.</span>
             </div>
           ) : (
-            <div className="flex flex-col gap-1">
-              {unassignedOrders.map((order: any, idx: number) => renderOrderItem(order, idx))}
+            <div className="flex flex-col gap-2">
+              {unassignedOrders.map((order: any) => renderOrderItem(order))}
             </div>
           )
         )}
