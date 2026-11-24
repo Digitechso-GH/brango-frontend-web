@@ -162,7 +162,7 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
           e.stopPropagation();
           onSelectOrder?.(order.id);
         }}
-        className="w-full flex flex-col gap-1 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer select-none group"
+        className="w-full flex flex-col gap-1 p-2 rounded-xl hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors cursor-pointer select-none group"
       >
         {/* Línea 1: Check/Icono + #Código + Nombre Cliente        Hora */}
         <div className="flex items-center justify-between gap-2">
@@ -339,7 +339,7 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
               return (
                 <div
                   key={route.id}
-                  className="bg-slate-50/80 dark:bg-white/[0.035] rounded-2xl p-3.5 flex flex-col gap-2.5 transition-all"
+                  className="bg-[#F8F9FA] dark:bg-white/[0.03] rounded-2xl p-3.5 flex flex-col gap-2.5 transition-all"
                 >
                   {/* Cabecera de la Ruta: Flecha + Título + Chofer/Estado + Badge */}
                   <div
@@ -384,12 +384,12 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
                   </div>
 
                   {/* Barra de progreso de la Ruta continua a lo ancho */}
-                  <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="w-full h-1 bg-slate-200/70 dark:bg-slate-700/60 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
-                        isAllDelivered ? "bg-emerald-500" : "bg-blue-600"
+                        isAllDelivered ? "bg-emerald-500 w-full" : percent > 0 ? "bg-blue-600" : "bg-transparent"
                       }`}
-                      style={{ width: `${percent}%` }}
+                      style={{ width: isAllDelivered ? "100%" : percent > 0 ? `${percent}%` : "0%" }}
                     />
                   </div>
 
