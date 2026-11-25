@@ -262,16 +262,12 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
           >
             <span>Sin ruta</span>
             <span
-              className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                unassignedOrders.length > 0
-                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
-                  : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-              }`}
+              className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
             >
               {unassignedOrders.length}
             </span>
             {activeTab === "unassigned" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500 rounded-full" />
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-600 dark:bg-slate-300 rounded-full" />
             )}
           </button>
         </div>
@@ -308,7 +304,7 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
         {activeTab === "unassigned" && (
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-0.5">
             <span>Pedidos pendientes de asignación a ruta</span>
-            <span className="font-semibold text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-800/50">
+            <span className="font-semibold text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60">
               {unassignedOrders.length} pedidos
             </span>
           </div>
@@ -371,14 +367,14 @@ export const OrderSideList = ({ onSelectOrder, onFocusOrder }: OrderSideListProp
                         isAllDelivered
                           ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/50"
                           : route.deliveredCount > 0
-                          ? "bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                          ? "bg-amber-100/80 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
                           : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                       }`}
                     >
                       {isAllDelivered
                         ? "Entregado"
                         : route.deliveredCount > 0
-                        ? "En curso"
+                        ? "En Progreso"
                         : "Pendiente"}
                     </span>
                   </div>

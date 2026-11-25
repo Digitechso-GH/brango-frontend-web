@@ -1,6 +1,7 @@
 import { useRef, useEffect } from "react";
 import { VEHICLE_MARKER_COLOR } from "@/shared/constants/status-colors";
 import { computeStreetRoute } from "@/shared/integrations/google/routes.service";
+import { smoothPolylineCorners } from "@/shared/utils/smoothPolyline";
 
 export const useMapRoute = (map: google.maps.Map | null) => {
   const activePolylinesRef = useRef<any[]>([]);
@@ -41,8 +42,11 @@ export const useMapRoute = (map: google.maps.Map | null) => {
 
       if (requestIdRef.current !== currentReqId) return;
 
+      // Suavizado de esquinas estilo Uber (arcos Bézier de radio sutil ~10m)
+      const smoothedPath = smoothPolylineCorners(allPathCoordinates, 10);
+
       const polyline = new google.maps.Polyline({
-        path: allPathCoordinates,
+        path: smoothedPath,
         geodesic: true,
         strokeColor: VEHICLE_MARKER_COLOR,
         strokeOpacity: 0.85,
